@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+sqlmodel
+numpy
+scipy
+scikit-learn
+pandas
+joblib
+pydantic-settings
+websockets
+reportlab
+pytest
+httpx

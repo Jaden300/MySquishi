@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  Design tokens. This block is the single source of truth for the palette.
+  tailwind.config.js maps these through var(), and src/lib/tokens.ts mirrors
+  the literal hex values for Recharts, which cannot consume var() in every
+  prop. A test asserts the two agree.
+*/
+:root {
+  --squish-50: #F2F9FE;
+  --squish-100: #DCEEFB;
+  --squish-300: #7DC5F0;
+  --squish-500: #2E9BDB;
+  --squish-700: #1B6C9E;
+  --ink: #132430;
+  --mist: #FFFFFF;
+  --alert: #E8825A;
+  --good: #4FBFA0;
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+
+  body {
+    background-color: var(--squish-50);
+    color: var(--ink);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+      "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Numbers are tabular so charts and tables do not jitter as values change. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Accessibility floor: focus must always be visible. */
+  :focus-visible {
+    outline: 2px solid var(--squish-500);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
+/*
+  Reduced motion is respected globally as a backstop. Squishi additionally
+  swaps to discrete states rather than merely animating faster, which is
+  handled in the component.
+*/
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -16,15 +16,15 @@ Checkbox board. Update as work completes. Grouped by build phase - phases are or
 **Exit criterion: a stranger can open the app and run a complete session with nothing plugged in.**
 
 ### Signal layer
-- [ ] `SignalSource` Protocol defined (the hardware boundary)
-- [ ] `SimulatedSource` - synthetic EMG generator (`sim/signal_gen.py`)
-- [ ] `sim/cohort_gen.py` - 200-400 synthetic patients, 6-14 weeks each
-- [ ] `signal/filters.py` - bandpass, notch, rectification, RMS envelope
-- [ ] `signal/features.py` - time- and frequency-domain features
+- [x] `SignalSource` Protocol defined (the hardware boundary)
+- [x] `SimulatedSource` - synthetic EMG generator (`sim/signal_gen.py`)
+- [x] `sim/cohort_gen.py` - 200-400 synthetic patients, 6-14 weeks each
+- [x] `signal/filters.py` - bandpass, notch, rectification, RMS envelope
+- [x] `signal/features.py` - time- and frequency-domain features
 
 ### ML stack (M1-M14: see `@docs/ML.md`)
 - [ ] M1 Signal Quality Index
-- [ ] M2 Rep segmentation (everything downstream depends on this)
+- [x] M2 Rep segmentation (everything downstream depends on this)
 - [ ] M3 EMG → force regression
 - [ ] M4 Rep quality scorer
 - [ ] M5 Spectral fatigue estimator

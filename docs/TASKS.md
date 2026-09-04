@@ -6,10 +6,10 @@ Checkbox board. Update as work completes. Grouped by build phase - phases are or
 
 - [x] Create `docs/` structure and workflow conventions
 - [x] `.gitignore` (plan file kept private)
-- [ ] `git init` + first commit
-- [ ] FastAPI backend skeleton + SQLite via SQLModel
-- [ ] React + Vite + TS + Tailwind frontend skeleton
-- [ ] Design tokens wired into Tailwind config
+- [x] `git init` + first commit
+- [x] FastAPI backend skeleton + SQLite via SQLModel
+- [x] React + Vite + TS + Tailwind frontend skeleton
+- [x] Design tokens wired into Tailwind config
 
 ## Phase 1: Everything in software, no hardware
 

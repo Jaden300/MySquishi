@@ -1,0 +1,12 @@
+# Dependencies for the Phase 2 hardware bring up probe only.
+#
+# Deliberately NOT in backend/requirements.txt. Two guard tests assert that
+# pyserial is absent from that file, which is what keeps the application
+# serial free until Phase 3 adds SerialSource on purpose rather than by
+# accident. Installing from here is an explicit act by the builder on bring
+# up day:
+#
+#     backend/.venv/bin/pip install -r tools/requirements-probe.txt
+#
+# The app never imports this. tools/probe.py is the only consumer.
+pyserial

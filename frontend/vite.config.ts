@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
@@ -14,5 +15,13 @@ export default defineConfig({
         ws: true,
       },
     },
+  },
+  test: {
+    // Components need a DOM. tokens.test.ts reads files from disk instead and
+    // opts back out with a @vitest-environment docblock.
+    environment: "jsdom",
+    setupFiles: "./src/test/setup.ts",
+    globals: true,
+    css: false,
   },
 });

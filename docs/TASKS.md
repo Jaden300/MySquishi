@@ -23,33 +23,33 @@ Checkbox board. Update as work completes. Grouped by build phase - phases are or
 - [x] `signal/features.py` - time- and frequency-domain features
 
 ### ML stack (M1-M14: see `@docs/ML.md`)
-- [ ] M1 Signal Quality Index
+- [x] M1 Signal Quality Index
 - [x] M2 Rep segmentation (everything downstream depends on this)
-- [ ] M3 EMG → force regression
-- [ ] M4 Rep quality scorer
-- [ ] M5 Spectral fatigue estimator
-- [ ] M6 Session anomaly detection
-- [ ] M7 Perceived vs. actual effort
-- [ ] M8 Adaptive session prescriber
-- [ ] M9 Recovery trajectory forecasting (headline)
-- [ ] M10 Time-to-goal estimator
-- [ ] M11 Plateau / changepoint detection
-- [ ] M12 Recovery archetype clustering
-- [ ] M13 Adherence / dropout risk
-- [ ] M14 Cohort percentile normalization
-- [ ] Explainability layer - every surfaced output has a "why"
+- [x] M3 EMG → force regression
+- [x] M4 Rep quality scorer
+- [x] M5 Spectral fatigue estimator
+- [x] M6 Session anomaly detection
+- [x] M7 Perceived vs. actual effort
+- [x] M8 Adaptive session prescriber
+- [x] M9 Recovery trajectory forecasting (headline)
+- [x] M10 Time-to-goal estimator
+- [x] M11 Plateau / changepoint detection
+- [x] M12 Recovery archetype clustering
+- [x] M13 Adherence / dropout risk
+- [x] M14 Cohort percentile normalization
+- [x] Explainability layer - every surfaced output has a "why"
 
 ### Frontend
-- [ ] `SquishiMascot` - contraction-driven, reduced-motion aware
-- [ ] Live session view (charts 1-7)
-- [ ] Session summary (charts 8-12)
-- [ ] Progress dashboard (charts 13-21)
-- [ ] Clinician view (charts 22-23)
-- [ ] Insights page with `WhyThis` drawers
-- [ ] Onboarding + calibration flows
-- [ ] Settings (source selector, diagnostics, export/delete)
-- [ ] Responsible AI / About page
-- [ ] Empty, loading, and error states everywhere
+- [x] `SquishiMascot` - contraction-driven, reduced-motion aware
+- [x] Live session view (charts 1-7)
+- [x] Session summary (charts 8-12)
+- [x] Progress dashboard (charts 13-21)
+- [x] Clinician view (charts 22-23)
+- [x] Insights page with `WhyThis` drawers
+- [x] Onboarding + calibration flows
+- [x] Settings (source selector, diagnostics, export/delete)
+- [x] Responsible AI / About page
+- [x] Empty, loading, and error states everywhere
 
 ## Phase 2: 🛑 HARD STOP: hardware bring-up with the builder
 

@@ -44,6 +44,38 @@
     outline-offset: 2px;
     border-radius: 4px;
   }
+
+  /* Screen reader only, for labels that carry state a sighted user gets from
+     shape or position. */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+}
+
+@layer components {
+  /* One form control style, so every input matches without each page
+     restating a dozen utility classes. */
+  .input {
+    border-radius: 12px;
+    border: 1px solid var(--squish-100);
+    background-color: var(--mist);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    color: var(--ink);
+    width: 100%;
+  }
+
+  .input:hover {
+    border-color: var(--squish-300);
+  }
 }
 
 /*

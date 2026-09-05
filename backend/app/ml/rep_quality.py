@@ -135,11 +135,24 @@ def train(seed: int = 0) -> dict[str, object]:
     # Held back for permutation importance at explanation time.
     explain_X, explain_y = build_training_set(n_samples=300, seed=seed + 1)
 
+    # Permutation importance describes the fitted model, not the repetition
+    # being scored, so it is computed once here rather than on every call.
+    # Recomputing it per score costs 175 ms, and the live loop scores a
+    # repetition inside a 200 ms frame budget. See docs/ARCHITECTURE.md.
+    factors = permutation_factors(
+        model,
+        explain_X,
+        explain_y,
+        list(QUALITY_FEATURES),
+        top_n=3,
+    )
+
     return {
         "model": model,
         "features": list(QUALITY_FEATURES),
         "cv_r2": float(scores.mean()),
         "n_rows": int(X.shape[0]),
+        "factors": factors,
         "explain_X": explain_X,
         "explain_y": explain_y,
     }
@@ -178,13 +191,17 @@ def score(
         level=0.8,
     ).clamped(0.0, 100.0)
 
-    factors = permutation_factors(
-        model,
-        np.asarray(artifact["explain_X"]),
-        np.asarray(artifact["explain_y"]),
-        names,
-        top_n=3,
-    )
+    # Cached at train time. Older artifacts predate the cache, so fall back to
+    # computing it here rather than failing on them.
+    factors = artifact.get("factors")  # type: ignore[assignment]
+    if factors is None:
+        factors = permutation_factors(
+            model,
+            np.asarray(artifact["explain_X"]),
+            np.asarray(artifact["explain_y"]),
+            names,
+            top_n=3,
+        )
 
     top = factors[0].name if factors else "hold_cv"
     feedback = _feedback_for(top, rep_feature_row, point)

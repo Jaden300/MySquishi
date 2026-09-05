@@ -1,3 +1,6 @@
+// @vitest-environment node
+// This test reads index.css from disk rather than rendering anything, so it
+// opts out of the jsdom environment the component tests need.
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";

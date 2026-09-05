@@ -15,10 +15,22 @@ from app.config import settings
 
 # check_same_thread is required because FastAPI serves requests from a thread
 # pool while the websocket handler holds its own connection.
+#
+# The pool choice matters and is easy to get wrong. StaticPool hands every
+# caller the *same* connection, so two requests arriving together interleave
+# on one sqlite cursor and fail with "bad parameter or other API misuse" or an
+# IndexError from deep inside the result proxy. The dashboard fires half a
+# dozen requests at once, so that is not a rare race. A file backed database
+# gets a normal pool, one connection per thread.
+#
+# An in memory database is the exception: there, separate connections would
+# each see their own empty database, so the shared connection is the point.
+_in_memory = ":memory:" in settings.db_url
+
 _engine = create_engine(
     settings.db_url,
     connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
+    poolclass=StaticPool if _in_memory else None,
     echo=False,
 )
 

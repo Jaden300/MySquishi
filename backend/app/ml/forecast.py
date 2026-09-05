@@ -26,6 +26,8 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
+from app.ml.explain import Explanation
+
 # Below this many sessions there is not enough history to fit anything
 # meaningful. Returning "not yet" is more honest than a curve through three
 # points that will be revised beyond recognition next week.
@@ -64,16 +66,12 @@ class TrajectoryForecast:
     insufficient_data: bool = False
     # Draws from the fitted posterior, which M10 samples for goal crossing.
     draws: np.ndarray | None = None
-    explanation: object | None = None
+    # Typed concretely, like every sibling model. It is None only in the
+    # insufficient_data case, where there is no fit to explain.
+    explanation: Explanation | None = None
 
     def to_dict(self) -> dict[str, object]:
-        from app.ml.explain import Explanation
-
-        explanation = (
-            self.explanation.to_dict()
-            if isinstance(self.explanation, Explanation)
-            else None
-        )
+        explanation = self.explanation.to_dict() if self.explanation else None
         return {
             "winner": self.winner,
             "forecast": [p.to_dict() for p in self.forecast],

@@ -18,6 +18,7 @@ downstream may key on a cluster index. See docs/ML.md.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import ClassVar
 
 import numpy as np
 import pandas as pd
@@ -66,7 +67,21 @@ ARCHETYPE_DESCRIPTIONS = {
 
 @dataclass(frozen=True)
 class ArchetypeResult:
-    """Which recovery shape a patient's trajectory resembles."""
+    """Which recovery shape a patient's trajectory resembles.
+
+    `confidence` is deliberately **not** an `Interval`, and it is the only
+    headline number in the stack that is not. The no-bare-point-estimates rule
+    exists because an estimate with sampling error must show that error. This
+    is not such an estimate: it is a separation ratio between the nearest and
+    second nearest centroid, a property of where the patient sits in a fitted
+    geometry. Bootstrapping a band around it would manufacture an uncertainty
+    that does not describe anything real.
+
+    What matters clinically is the same thing either way: whether the
+    assignment is decisive or the patient sits between two shapes. That is
+    reported explicitly as `is_ambiguous`, so a weak match is surfaced as a
+    hedge in the copy rather than hidden behind a confident-looking label.
+    """
 
     archetype: str
     label: str
@@ -75,6 +90,15 @@ class ArchetypeResult:
     confidence: float
     explanation: Explanation
 
+    # Below this, the two nearest archetypes are close enough that naming one
+    # would overstate the evidence.
+    AMBIGUOUS_BELOW: ClassVar[float] = 0.15
+
+    @property
+    def is_ambiguous(self) -> bool:
+        """True when this patient sits between two archetypes."""
+        return self.confidence < self.AMBIGUOUS_BELOW
+
     def to_dict(self) -> dict[str, object]:
         return {
             "archetype": self.archetype,
@@ -82,6 +106,7 @@ class ArchetypeResult:
             "description": self.description,
             "coordinates": list(self.coordinates),
             "confidence": round(self.confidence, 3),
+            "is_ambiguous": self.is_ambiguous,
             "explanation": self.explanation.to_dict(),
         }
 
@@ -224,6 +249,24 @@ def assign(
         for i in top
     ]
 
+    # A patient sitting between two shapes gets hedged copy, not a confident
+    # label. The threshold lives on ArchetypeResult so the flag the API
+    # serializes and the wording here can never disagree.
+    runner_up = ARCHETYPE_LABELS[label_map[int(order[1])]].lower()
+    if confidence < ArchetypeResult.AMBIGUOUS_BELOW:
+        summary = (
+            f"Your recovery sits between the "
+            f"{ARCHETYPE_LABELS[archetype].lower()} and {runner_up} patterns, so "
+            f"this grouping is not a firm call yet. The closer of the two is "
+            f"{ARCHETYPE_LABELS[archetype].lower()}. "
+            f"{ARCHETYPE_DESCRIPTIONS[archetype]}"
+        )
+    else:
+        summary = (
+            f"Your recovery most resembles the {ARCHETYPE_LABELS[archetype].lower()} "
+            f"pattern. {ARCHETYPE_DESCRIPTIONS[archetype]}"
+        )
+
     return ArchetypeResult(
         archetype=archetype,
         label=ARCHETYPE_LABELS[archetype],
@@ -231,10 +274,7 @@ def assign(
         coordinates=(float(coords[0]), float(coords[1])),
         confidence=confidence,
         explanation=Explanation(
-            summary=(
-                f"Your recovery most resembles the {ARCHETYPE_LABELS[archetype].lower()} "
-                f"pattern. {ARCHETYPE_DESCRIPTIONS[archetype]}"
-            ),
+            summary=summary,
             factors=factors,
             method="k means clustering over trajectory shape, named by centroid geometry",
         ),

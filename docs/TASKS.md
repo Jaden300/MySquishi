@@ -55,9 +55,9 @@ Checkbox board. Update as work completes. Grouped by build phase - phases are or
 
 **Do not proceed past this line autonomously.**
 
-- [ ] `firmware/mysquishi_probe.ino` - analog read + serial print only
-- [ ] `tools/probe.py` - standalone 60s diagnostic, prints tier verdict A/B/C/D
-- [ ] `docs/HARDWARE_CHECKLIST.md` - placement, prep, wiring, failure modes, test protocol
+- [x] `firmware/mysquishi_probe.ino` - analog read + serial print only
+- [x] `tools/probe.py` - standalone 60s diagnostic, prints tier verdict A/B/C/D
+- [x] `docs/HARDWARE_CHECKLIST.md` - placement, prep, wiring, failure modes, test protocol
 - [ ] **Builder runs the probe and reports the observed tier**
 
 ## Phase 3: Connect hardware, scaled to the observed tier

@@ -241,53 +241,29 @@ def _summarise(
 
 
 def run_survey(port: str) -> probe.Recording:
-    """Record the survey, announcing each pose before its window opens.
+    """Record the whole survey in one pass, counting into each pose.
 
-    probe.record() drives whatever tuple sits in probe.PROTOCOL, so the survey
-    is recorded by swapping that table rather than duplicating the serial
-    handling. The countdown is inserted by making each pose its own one entry
-    protocol, which keeps the lead in outside every measured window.
+    This is a single call into probe.record() with the survey table and a lead
+    in hook, rather than one call per pose. Reopening the serial port between
+    poses resets the link, which drops samples across every boundary and
+    leaves the recorded phase offsets out of step with the samples they are
+    supposed to index.
     """
-    original = probe.PROTOCOL
-    timestamps: list[float] = []
-    counts: list[float] = []
-    header: list[str] = []
-    phases: dict[str, tuple[float, float]] = {}
-    elapsed = 0.0
-
-    try:
-        for prompt, duration, label in SURVEY:
-            if not str(label).startswith("rest"):
-                _countdown(prompt)
-
-            probe.PROTOCOL = ((prompt, duration, label),)
-            part = probe.record(port, guided=False, seconds=duration)
-
-            # record() timestamps each span from its own start, so spans are
-            # concatenated and the phase windows offset by what came before.
-            timestamps.extend(part.timestamps_ms.tolist())
-            counts.extend(part.counts.tolist())
-            header.extend(h for h in part.header if h not in header)
-            if label:
-                phases[label] = (elapsed, elapsed + duration)
-            elapsed += duration
-    finally:
-        probe.PROTOCOL = original
-
-    return probe.Recording(
-        timestamps_ms=np.asarray(timestamps, dtype=float),
-        counts=np.asarray(counts, dtype=float),
-        phases=phases,
-        header=header,
-    )
+    return probe.record(port, guided=True, protocol=SURVEY, lead_in=_countdown)
 
 
-def _countdown(prompt: str, seconds: int = 3) -> None:
-    """Announce the next pose, then count into it.
+def _countdown(prompt: str, label: str | None, seconds: int = 3) -> None:
+    """Announce the next span, then count into it.
 
     The whole point: the wearer reads during the countdown, not during the
-    window that is about to be measured.
+    window that is about to be measured. Rests are announced without a
+    countdown, since relaxing needs no preparation and the pause between poses
+    is already long enough to read a single word.
     """
+    if label is not None and label.startswith("rest"):
+        print(f"\n  {prompt}")
+        return
+
     print(f"\n  NEXT: {prompt}")
     for remaining in range(seconds, 0, -1):
         print(f"\r        starting in {remaining}...", end="", flush=True)

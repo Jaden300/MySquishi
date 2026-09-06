@@ -24,6 +24,7 @@ import argparse
 import csv
 import sys
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -160,11 +161,25 @@ def _countdown(prompt: str, seconds: float) -> None:
     print(f"\r  {prompt}  [ done ]" + " " * 10)
 
 
-def record(port: str, *, guided: bool = True, seconds: float = 60.0) -> Recording:
+def record(
+    port: str,
+    *,
+    guided: bool = True,
+    seconds: float = 60.0,
+    protocol: tuple[tuple[str, float, str | None], ...] | None = None,
+    lead_in: "Callable[[str, str | None], None] | None" = None,
+) -> Recording:
     """Run the protocol and collect the trace.
 
     Returns whatever was captured even if the builder interrupts partway, on
     the principle that a short recording still grades and a lost one does not.
+
+    `protocol` overrides the module level PROTOCOL, and `lead_in` is called
+    before each span's window opens. Both exist for tools/gestures.py, which
+    needs a different phase table and a countdown ahead of every pose. They
+    have to be handled inside this loop rather than by calling record() once
+    per span: reopening the port between spans resets the link, which drops
+    samples and pushes the recorded phase offsets out of step with the data.
     """
     serial, _ = _require_serial()
 
@@ -189,14 +204,23 @@ def record(port: str, *, guided: bool = True, seconds: float = 60.0) -> Recordin
         time.sleep(0.2)
 
         started = time.monotonic()
-        plan = PROTOCOL if guided else (("Recording.", seconds, None),)
+        if protocol is not None:
+            plan = protocol
+        else:
+            plan = PROTOCOL if guided else (("Recording.", seconds, None),)
 
-        if guided:
+        if guided and lead_in is None:
             print("\n  Starting in 3 seconds. Get comfortable.\n")
             time.sleep(3.0)
 
         try:
             for prompt, duration, label in plan:
+                if lead_in is not None:
+                    # The countdown runs before the window opens, so the
+                    # seconds spent reading the prompt are not measured as
+                    # part of the pose.
+                    lead_in(prompt, label)
+
                 phase_start = time.monotonic() - started
                 deadline = time.monotonic() + duration
 

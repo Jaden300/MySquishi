@@ -151,8 +151,19 @@ def report(levels: dict[str, np.ndarray]) -> None:
         )
         return
 
+    # A rest span the wearer did not actually relax through drags the pooled
+    # baseline up, which can push a genuinely light pose below it and make a
+    # real contraction read as undetectable. Flag those spans rather than
+    # letting them quietly distort every ratio on the page.
+    rest_means = {k: float(levels[k].mean()) for k in rest_keys}
+    typical = float(np.median(list(rest_means.values()))) if rest_means else 0.0
+    contaminated = [
+        k for k, m in rest_means.items() if typical > 0 and m > 2.0 * typical
+    ]
+    clean_rests = [k for k in rest_keys if k not in contaminated]
+
     rest_pool = (
-        np.concatenate([levels[k] for k in rest_keys])
+        np.concatenate([levels[k] for k in (clean_rests or rest_keys)])
         if rest_keys
         else np.array([], dtype=float)
     )
@@ -162,7 +173,17 @@ def report(levels: dict[str, np.ndarray]) -> None:
     print("\n" + "=" * 66)
     print("  Gesture survey")
     print("=" * 66)
-    print(f"\n  Baseline, pooled across {len(rest_keys)} rest spans: {baseline:.4f}\n")
+    print(
+        f"\n  Baseline, pooled across {len(clean_rests or rest_keys)} rest"
+        f" spans: {baseline:.4f}"
+    )
+    if contaminated:
+        print(
+            f"\n  Excluded from baseline: {', '.join(sorted(contaminated))}."
+            "\n  Those spans sit well above the other rests, so the muscle had"
+            "\n  not returned to baseline. Levels there are not resting levels."
+        )
+    print()
 
     print("  Pose level, and how far above rest\n")
     for key in pose_keys:
@@ -211,24 +232,55 @@ def _summarise(
                 "\n      force estimate in kg would be fitting noise."
             )
 
-    fingers = [k for k in ("index", "middle", "ring", "little") if k in levels]
+    # Only fingers that actually produced a contraction can speak to whether
+    # fingers are separable. A pose the wearer could not perform sits at rest,
+    # and pairing it against one that worked yields a large effect size that
+    # measures the failed pose rather than any finger discrimination.
+    fingers = [
+        k
+        for k in ("index", "middle", "ring", "little")
+        if k in levels and separation(levels[k], rest_pool) >= D_CLEAN
+    ]
     if len(fingers) >= 2:
-        best = max(
-            separation(levels[a], levels[b])
+        pairs = {
+            (a, b): separation(levels[a], levels[b])
             for a, b in itertools.combinations(fingers, 2)
-        )
-        if best < D_OVERLAP:
+        }
+        worst_pair, worst = min(pairs.items(), key=lambda kv: kv[1])
+        indistinct = [p for p, d in pairs.items() if d < D_OVERLAP]
+        scope = ", ".join(fingers)
+
+        # The worst pair is the honest statistic here, not the best one. Every
+        # finger curl recruits the same flexor mass, so a wide gap between two
+        # of them reports that one was pressed harder, not that the channel
+        # knows which finger moved. A single indistinguishable pair is enough
+        # to sink per finger decoding, however well other pairs happen to score.
+        if indistinct:
+            names = "; ".join(f"{a} vs {b}" for a, b in indistinct)
             print(
-                f"    - individual fingers do not separate (best pair d = {best:.2f})."
-                "\n      Expected on one channel: the finger compartments of flexor"
-                "\n      digitorum superficialis sum into a single differential pair."
-                "\n      Decoding fingers needs an 8 to 16 channel array."
+                f"    - individual fingers do not separate (across {scope})."
+                f"\n      Indistinguishable: {names}."
+                f"\n      Closest pair {worst_pair[0]} vs {worst_pair[1]} at"
+                f" d = {worst:.2f}."
+                "\n      Expected on one channel: the finger compartments of"
+                "\n      flexor digitorum superficialis sum into a single"
+                "\n      differential pair, so what varies between these poses is"
+                "\n      how hard you pressed, not which finger moved. Decoding"
+                "\n      fingers needs an 8 to 16 channel array."
             )
         else:
             print(
-                f"    - some finger pairs separate (best d = {best:.2f}), which is"
-                "\n      unusual on one channel. Worth a repeat run before believing."
+                f"    - every finger pair separates (across {scope}, worst pair"
+                f"\n      {worst_pair[0]} vs {worst_pair[1]} at d = {worst:.2f}),"
+                "\n      which is unusual on one channel. Repeat the run before"
+                "\n      believing it: pressing each finger with a different force"
+                "\n      reproduces this without any finger information."
             )
+    elif len(fingers) < 2:
+        print(
+            "    - too few finger poses rose above rest to say whether fingers"
+            "\n      separate. Repeat with firmer single finger curls."
+        )
 
     detectable = [
         k for k in pose_keys if separation(levels[k], rest_pool) >= D_OVERLAP

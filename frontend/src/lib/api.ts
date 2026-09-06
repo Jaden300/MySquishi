@@ -7,6 +7,7 @@
  * an error and draws it, the same way it draws data.
  */
 
+import { DEFAULT_MUSCLE, type Muscle } from "./muscle";
 import type {
   Calibration,
   Goal,
@@ -99,15 +100,19 @@ export const api = {
 
   // Signal
   listSources: () => request<Source[]>("/signal/sources"),
-  getCalibration: (patientId: string) =>
+  getCalibration: (patientId: string, muscle: Muscle = DEFAULT_MUSCLE) =>
     request<Calibration | null>(
-      `/signal/calibration?patient_id=${encodeURIComponent(patientId)}`,
+      `/signal/calibration?patient_id=${encodeURIComponent(patientId)}` +
+        `&muscle=${encodeURIComponent(muscle)}`,
     ),
   calibrate: (payload: {
     patient_id: string;
     feature_rows: Array<Record<string, number>>;
     reference_kg: number;
     mvc_reference_rms: number;
+    /** A maximum voluntary contraction belongs to a muscle as well as a
+     *  person, so calibrations are held one per patient per muscle. */
+    muscle?: Muscle;
   }) => post<Calibration>("/signal/calibrate", payload),
 
   // Models. Each returns the same envelope, so the UI treats them uniformly.

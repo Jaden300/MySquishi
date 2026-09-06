@@ -13,6 +13,7 @@ import { useApi } from "../lib/useApi";
 import { tokens } from "../lib/tokens";
 import { ChartFrame } from "../components/charts/ChartFrame";
 import { ClinicalTooltip, SyntheticBadge } from "../components/Honesty";
+import { allowsKilograms, muscleLabel } from "../lib/muscle";
 import type { SessionSummary } from "../types/api";
 
 const PATIENT = "demo";
@@ -106,6 +107,7 @@ export function ClinicianPage() {
             <thead className="sticky top-0 bg-mist">
               <tr className="border-b border-squish-100 text-xs text-ink/60">
                 <SortHeader label="Date" k="started_at" sortKey={sortKey} onSort={setSortKey} />
+                <th className="py-2">Muscle</th>
                 <SortHeader label="Grip (kg)" k="strength_kg" sortKey={sortKey} onSort={setSortKey} />
                 <SortHeader label="Mean MVC" k="mean_mvc" sortKey={sortKey} onSort={setSortKey} />
                 <SortHeader label="Reps" k="rep_count" sortKey={sortKey} onSort={setSortKey} />
@@ -122,8 +124,16 @@ export function ClinicianPage() {
                   <td className="tabular py-2 text-ink/80">
                     {new Date(session.started_at).toLocaleDateString()}
                   </td>
+                  <td className="py-2 text-ink/80">
+                    {muscleLabel(session.muscle)}
+                  </td>
+                  {/* Kilograms are validated on hand dynamometry, so a non
+                      grip session has no figure here rather than a converted
+                      one. See lib/muscle.ts. */}
                   <td className="tabular py-2 text-ink/80">
-                    {session.strength_kg?.toFixed(1) ?? "-"}
+                    {allowsKilograms(session.muscle)
+                      ? (session.strength_kg?.toFixed(1) ?? "-")
+                      : "-"}
                   </td>
                   <td className="tabular py-2 text-ink/80">
                     {session.mean_mvc?.toFixed(0) ?? "-"}

@@ -28,6 +28,7 @@ import {
   type TrendPoint,
 } from "../components/charts/StrengthTrendChart";
 import { IntervalReadout, SyntheticBadge } from "../components/Honesty";
+import { NON_GRIP_NOTE, allowsKilograms } from "../lib/muscle";
 import type { SessionSummary } from "../types/api";
 
 const PATIENT = "demo";
@@ -47,6 +48,12 @@ export function ProgressPage() {
     .filter((s) => s.strength_kg != null)
     .slice()
     .reverse();
+
+  // How many sessions the kilogram views leave out, so the omission can be
+  // stated rather than silently applied.
+  const nonGripCount = (sessions.data ?? []).filter(
+    (s) => s.rep_count != null && !allowsKilograms(s.muscle),
+  ).length;
 
   const trend = buildTrend(completed, forecast.data, anomalies.data);
 
@@ -68,7 +75,13 @@ export function ProgressPage() {
         error={sessions.error ?? forecast.error}
         onRetry={sessions.reload}
         isSynthetic={completed.some((s) => s.is_synthetic)}
-        description="Measured sessions with a projection and its likely range."
+        description={
+          nonGripCount > 0
+            ? `Measured grip sessions with a projection and its likely range. ${nonGripCount} ${
+                nonGripCount === 1 ? "session on another muscle is" : "sessions on other muscles are"
+              } not shown here: ${NON_GRIP_NOTE}`
+            : "Measured sessions with a projection and its likely range."
+        }
       />
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -136,12 +149,18 @@ function buildTrend(
     }
   }
 
-  const points: TrendPoint[] = sessions.map((session, index) => ({
-    index,
-    label: `S${index + 1}`,
-    strength: session.strength_kg,
-    anomaly: anomalyById.get(session.id) ?? null,
-  }));
+  // Grip sessions only. The chart is in kilograms, and kilograms are validated
+  // on hand dynamometry, so a biceps session has no comparable value to plot.
+  // Those sessions are still shown everywhere percent MVC, fatigue and rep
+  // counts appear. See lib/muscle.ts.
+  const points: TrendPoint[] = sessions
+    .filter((session) => allowsKilograms(session.muscle))
+    .map((session, index) => ({
+      index,
+      label: `S${index + 1}`,
+      strength: session.strength_kg ?? null,
+      anomaly: anomalyById.get(session.id) ?? null,
+    }));
 
   const forecastValue = (forecast as { value?: unknown } | null)?.value as
     | { forecast?: Array<{ point: number; lower: number; upper: number }> }

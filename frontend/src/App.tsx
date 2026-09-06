@@ -6,6 +6,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
 import { Layout, RouteError } from "./components/Layout";
 import { AboutPage } from "./pages/AboutPage";
+import { ConnectPage } from "./pages/ConnectPage";
 import { CalibratePage } from "./pages/CalibratePage";
 import { ClinicianPage } from "./pages/ClinicianPage";
 import { InsightsPage } from "./pages/InsightsPage";
@@ -30,6 +31,7 @@ const router = createBrowserRouter([
       { path: "progress", element: <ProgressPage /> },
       { path: "insights", element: <InsightsPage /> },
       { path: "clinician", element: <ClinicianPage /> },
+      { path: "connect", element: <ConnectPage /> },
       { path: "settings", element: <SettingsPage /> },
       { path: "about", element: <AboutPage /> },
     ],

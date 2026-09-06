@@ -16,6 +16,8 @@ import {
   SignalQualityBadge,
 } from "../components/charts/LiveCharts";
 import { SquishiMascot } from "../components/SquishiMascot";
+import { MuscleSelector } from "../components/MuscleSelector";
+import { SourceSelector } from "../components/SourceSelector";
 import { SourceChip } from "../components/Honesty";
 import { liveConnection } from "../lib/ws";
 import { useLiveStore } from "../store/live";
@@ -29,7 +31,9 @@ export function SessionPage() {
   const elapsed = useLiveStore((s) => s.elapsed);
   const reps = useLiveStore((s) => s.reps);
 
+  const muscle = useLiveStore((s) => s.muscle);
   const [junkiness, setJunkiness] = useState(0);
+  const [source, setSource] = useState("simulated");
 
   // Leaving the page must not leave a socket open behind it.
   useEffect(() => () => liveConnection.disconnect(), []);
@@ -65,11 +69,23 @@ export function SessionPage() {
         </div>
       ) : null}
 
+      {/* Setup, before anything starts. Both choices are locked once a session
+          is running: the muscle decides which calibration the readings are
+          normalized against, and the source decides where they come from. */}
+      <div className="grid gap-4 rounded-panel border border-squish-100 bg-mist p-4 sm:grid-cols-2">
+        <MuscleSelector disabled={status !== "idle" && status !== "ended"} />
+        <SourceSelector
+          value={source}
+          onChange={setSource}
+          disabled={status !== "idle" && status !== "ended"}
+        />
+      </div>
+
       <div className="flex flex-wrap items-center gap-3">
         {status === "idle" || status === "ended" ? (
           <button
             type="button"
-            onClick={() => liveConnection.connect({ junkiness })}
+            onClick={() => liveConnection.connect({ junkiness, muscle, source })}
             className="rounded-card bg-squish-500 px-5 py-2 text-mist hover:bg-squish-700"
           >
             Start session
@@ -93,19 +109,23 @@ export function SessionPage() {
           </>
         )}
 
-        <label className="ml-auto flex items-center gap-2 text-xs text-ink/60">
-          Signal noise
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.1}
-            value={junkiness}
-            onChange={(e) => setJunkiness(Number(e.target.value))}
-            className="w-32"
-            aria-label="Simulated signal noise, for demonstrating the quality badge"
-          />
-        </label>
+        {/* Only the synthetic generator has a noise dial to turn. On a real
+            sensor the quality badge reacts to the electrodes themselves. */}
+        {source === "simulated" ? (
+          <label className="ml-auto flex items-center gap-2 text-xs text-ink/60">
+            Signal noise
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.1}
+              value={junkiness}
+              onChange={(e) => setJunkiness(Number(e.target.value))}
+              className="w-32"
+              aria-label="Simulated signal noise, for demonstrating the quality badge"
+            />
+          </label>
+        ) : null}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[300px_1fr]">

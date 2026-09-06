@@ -33,6 +33,7 @@ import { useApi } from "../lib/useApi";
 import { tokens } from "../lib/tokens";
 import { ChartFrame } from "../components/charts/ChartFrame";
 import { SourceChip, SyntheticBadge } from "../components/Honesty";
+import { FATIGUE_BANDWIDTH_NOTE, muscleLabel } from "../lib/muscle";
 import type { Rep } from "../types/api";
 
 export function SessionSummaryPage() {
@@ -52,6 +53,8 @@ export function SessionSummaryPage() {
           {session ? (
             <p className="text-sm text-ink/60">
               {new Date(session.started_at).toLocaleString()}
+              {" - "}
+              {muscleLabel(session.muscle)}
             </p>
           ) : null}
         </div>
@@ -97,7 +100,15 @@ export function SessionSummaryPage() {
         <ChartFrame
           title="Fatigue"
           tooltipTerm="MDF slope"
-          description="Median frequency against repetition index. A falling line is objective evidence of fatigue."
+          description={
+            // At 500 Hz the observable spectrum stops at 250 Hz, so the upper
+            // part of the sEMG band is simply not seen and the absolute
+            // numbers are not textbook comparable. The within session trend,
+            // which is what fatigue actually is, holds regardless.
+            session?.is_live
+              ? `Median frequency against repetition index. A falling line is objective evidence of fatigue. ${FATIGUE_BANDWIDTH_NOTE}`
+              : "Median frequency against repetition index. A falling line is objective evidence of fatigue."
+          }
           loading={detail.loading}
           error={detail.error}
           onRetry={detail.reload}

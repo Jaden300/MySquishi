@@ -7,6 +7,10 @@
  * up as undefined inside a chart.
  */
 
+import type { Muscle } from "../lib/muscle";
+
+export type { Muscle };
+
 /** A prediction with its uncertainty. Never a bare number. */
 export interface Interval {
   point: number;
@@ -63,6 +67,7 @@ export interface SessionSummary {
   source_id: string;
   is_live: boolean;
   is_synthetic: boolean;
+  muscle: Muscle;
 
   borg: number | null;
   quickdash_score: number | null;
@@ -81,7 +86,10 @@ export interface SessionSummary {
   fatigue_r_squared: number | null;
   fatigue_p_value: number | null;
 
-  strength_kg: number | null;
+  /** Absent entirely on a non grip muscle, not null. The backend omits the
+   *  key rather than sending an empty one, so a stale value cannot be
+   *  rendered into it. See lib/muscle.ts. */
+  strength_kg?: number | null;
   anomaly_score: number | null;
   anomaly_direction: string | null;
   adherence_gap_days: number | null;
@@ -197,6 +205,8 @@ export interface Frame {
   sqi: number;
   is_live: boolean;
   source_id: string;
+  /** Which muscle is being trained. Gates the kilogram based claims. */
+  muscle: Muscle;
   /** False when no calibration exists, so kilogram figures are uncalibrated. */
   calibrated: boolean;
   rep_event: RepEvent | null;
@@ -217,6 +227,7 @@ export interface SummaryFrame {
   fatigue: FatigueSummary | null;
   is_live: boolean;
   source_id: string;
+  muscle: Muscle;
   calibrated: boolean;
   reps: Array<{
     index: number;
@@ -256,6 +267,7 @@ export const FRAME_KEYS = [
   "sqi",
   "is_live",
   "source_id",
+  "muscle",
   "calibrated",
   "rep_event",
   "coach",

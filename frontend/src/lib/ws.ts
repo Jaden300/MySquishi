@@ -6,6 +6,7 @@
  */
 
 import { useLiveStore } from "../store/live";
+import { DEFAULT_MUSCLE, type Muscle } from "./muscle";
 import type { LiveMessage } from "../types/api";
 
 export interface LiveOptions {
@@ -13,6 +14,9 @@ export interface LiveOptions {
   patientId?: string;
   /** Signal quality dial, so a demo can show the SQI badge reacting. */
   junkiness?: number;
+  /** Which muscle is being trained. Decides which calibration is loaded and
+   *  which claims the backend will report. */
+  muscle?: Muscle;
 }
 
 export class LiveConnection {
@@ -23,6 +27,7 @@ export class LiveConnection {
       source = "simulated",
       patientId = "demo",
       junkiness = 0,
+      muscle = DEFAULT_MUSCLE,
     } = options;
 
     const store = useLiveStore.getState();
@@ -36,7 +41,8 @@ export class LiveConnection {
       `${protocol}//${window.location.host}/api/signal/live` +
       `?source=${encodeURIComponent(source)}` +
       `&patient_id=${encodeURIComponent(patientId)}` +
-      `&junkiness=${junkiness}`;
+      `&junkiness=${junkiness}` +
+      `&muscle=${encodeURIComponent(muscle)}`;
 
     const socket = new WebSocket(url);
     this.socket = socket;

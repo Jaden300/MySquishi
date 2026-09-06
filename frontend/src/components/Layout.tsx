@@ -12,6 +12,7 @@ const NAV = [
   { to: "/progress", label: "Progress" },
   { to: "/insights", label: "Insights" },
   { to: "/clinician", label: "Clinician" },
+  { to: "/connect", label: "Connect" },
   { to: "/settings", label: "Settings" },
   { to: "/about", label: "About" },
 ];

@@ -23,6 +23,11 @@ import {
 
 import { useLiveStore } from "../../store/live";
 import { tokens } from "../../lib/tokens";
+import {
+  EFFORT_CEILING_PCT,
+  effortLevelLabel,
+  effortToPercent,
+} from "../../lib/effort";
 import { ChartFrame } from "./ChartFrame";
 import { ClinicalTooltip } from "../Honesty";
 
@@ -78,8 +83,15 @@ export function EffortGauge() {
   const calibrated = useLiveStore((s) => s.calibrated);
 
   const target = coach?.target_mvc_pct ?? 50;
-  const clamped = Math.max(0, Math.min(120, mvcPct));
   const onTarget = Math.abs(mvcPct - target) <= 10;
+
+  // The bar is placed on a square root scale, not a linear one. The measured
+  // envelope response barely moves through the low effort range where a
+  // rehabilitation patient works, so a linear bar reads as broken. See
+  // lib/effort.ts and docs/HARDWARE_FINDINGS.md. The number above it stays the
+  // true percent MVC: only the bar position is rescaled.
+  const fillPct = effortToPercent(mvcPct);
+  const targetPct = effortToPercent(target);
 
   return (
     <ChartFrame
@@ -106,25 +118,27 @@ export function EffortGauge() {
           role="meter"
           aria-valuenow={Math.round(mvcPct)}
           aria-valuemin={0}
-          aria-valuemax={120}
+          aria-valuemax={EFFORT_CEILING_PCT}
           aria-label="Effort as a percentage of your maximum"
         >
           <div
             className="h-full transition-[width] duration-100"
             style={{
-              width: `${(clamped / 120) * 100}%`,
+              width: `${fillPct}%`,
               backgroundColor: onTarget ? tokens.good : tokens.squish500,
             }}
           />
           <div
             className="absolute top-0 h-full border-l-2 border-dashed border-ink/40"
-            style={{ left: `${(target / 120) * 100}%` }}
+            style={{ left: `${targetPct}%` }}
           />
         </div>
 
         {/* State is never conveyed by colour alone. */}
         <p className="text-xs text-ink/60">
           {onTarget ? "On target" : mvcPct < target ? "Below target" : "Above target"}
+          {" - "}
+          {effortLevelLabel(mvcPct).toLowerCase()} effort
         </p>
       </div>
     </ChartFrame>

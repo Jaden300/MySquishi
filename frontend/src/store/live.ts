@@ -10,6 +10,7 @@
 
 import { create } from "zustand";
 
+import { DEFAULT_MUSCLE, type Muscle } from "../lib/muscle";
 import type { Coach, Frame, RepEvent, SummaryFrame } from "../types/api";
 
 /** How many envelope points the oscilloscope keeps on screen. */
@@ -42,6 +43,13 @@ interface LiveState {
   sourceId: string;
   calibrated: boolean;
 
+  /**
+   * Which muscle is being trained. This one is a setting rather than session
+   * state: it survives reset(), because a person who selected their biceps
+   * has not changed muscle by starting a second session.
+   */
+  muscle: Muscle;
+
   raw: number[];
   envelope: number[];
   coach: Coach | null;
@@ -52,6 +60,7 @@ interface LiveState {
   error: string | null;
 
   setStatus: (status: LiveStatus) => void;
+  setMuscle: (muscle: Muscle) => void;
   applyFrame: (frame: Frame) => void;
   applySummary: (summary: SummaryFrame) => void;
   setError: (message: string | null) => void;
@@ -66,6 +75,7 @@ const initial = {
   sqi: 100,
   isLive: false,
   sourceId: "simulated",
+  muscle: DEFAULT_MUSCLE,
   calibrated: false,
   raw: [] as number[],
   envelope: [] as number[],
@@ -81,6 +91,8 @@ export const useLiveStore = create<LiveState>((set) => ({
 
   setStatus: (status) => set({ status }),
 
+  setMuscle: (muscle) => set({ muscle }),
+
   applyFrame: (frame) =>
     set((state) => {
       const raw = [...state.raw, ...frame.raw].slice(-TRACE_LENGTH);
@@ -94,6 +106,7 @@ export const useLiveStore = create<LiveState>((set) => ({
         sqi: frame.sqi,
         isLive: frame.is_live,
         sourceId: frame.source_id,
+        muscle: frame.muscle,
         calibrated: frame.calibrated,
         raw,
         envelope,
@@ -108,7 +121,9 @@ export const useLiveStore = create<LiveState>((set) => ({
 
   setError: (error) => set({ error, status: "idle" }),
 
-  reset: () => set({ ...initial }),
+  // The muscle selection is a setting rather than session state, so it
+  // survives a reset. Everything else starts clean.
+  reset: () => set((state) => ({ ...initial, muscle: state.muscle })),
 }));
 
 /** Squishi's selector. Exported so there is exactly one of it. */

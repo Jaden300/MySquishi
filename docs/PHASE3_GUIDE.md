@@ -7,6 +7,12 @@ assumes them.
 Written so an agent picking this up cold can start without rediscovering
 anything.
 
+> **Phase 3 is now built.** This document is kept as the reasoning behind the
+> implementation rather than as a plan. Four things in it were wrong and are
+> corrected inline below: there were four guard tests rather than two, several
+> line numbers had drifted, `probe.py` lives at `backend/tools/`, and there is
+> no `POST /api/sessions` at all. See `@docs/TASKS.md` for what shipped.
+
 ## Where you are starting from
 
 Phase 1 built the whole app against `SimulatedSource`. Phase 2 graded the rig
@@ -26,13 +32,22 @@ only clinical claims, and add the muscle selector. Nothing else changes.
 
 New file `app/sources/serial_source.py`, satisfying the Protocol.
 
-Note the two guards first. Both live in `app/tests/test_api.py` and both enforce
-the Phase 2 hard stop, so both will fail the moment this file is written:
+Note the guards first. **There are four, not two.** This section originally
+said both lived in `app/tests/test_api.py`; two more sit in
+`app/tests/test_sources.py`, and all four fail the moment this file is written:
 
 - `test_no_serial_imports` (`test_api.py:32`) scans every `.py` under `app/`
   for a line starting `import serial` or `from serial`
 - `test_pyserial_is_not_a_dependency` (`test_api.py:48`) asserts `pyserial` is
   absent from `backend/requirements.txt`
+- `test_no_serial_imports_anywhere_in_the_app` (`test_sources.py:149`), a regex
+  variant that skips `tests/`
+- `test_pyserial_is_not_a_dependency` (`test_sources.py:164`), a near duplicate
+
+Three further tests **invert** rather than simply failing, and need rewriting
+rather than narrowing: `test_api.py:207` asserts `"Phase 3"` appears in the
+serial error, `test_sources.py:39` asserts `NotImplementedError`, and
+`test_sources.py:47` asserts only `simulated` is available.
 
 **Update them, do not delete them.** Narrow the import scan to exclude
 `app/sources/serial_source.py` so it still protects the rest of the package,
@@ -64,11 +79,17 @@ produces plausible garbage rather than an error:
 - Line format `millis,adc_counts`, ASCII, one sample per line
 - Lines beginning `#` are the boot header, collect them and skip
 
-`tools/probe.py` already solves every hard part of this. Its `record()`
-(`tools/probe.py:163`) handles port opening, buffer reset, header lines, and
-partial line recovery. `discover_port()` (`probe.py:114`) auto detects across
-board types with a denylist for the permanent macOS ports. **Reuse that logic
-rather than rewriting it.**
+`backend/tools/probe.py` already solves every hard part of this (note the path:
+`backend/tools/`, not a top level `tools/`). Its `record()` (`probe.py:164`)
+handles port opening, buffer reset, header lines, and partial line recovery.
+`discover_port()` (`probe.py:115`) auto detects across board types with a
+denylist for the permanent macOS ports. **Reuse that logic rather than
+rewriting it.**
+
+One caveat on that reuse: `discover_port` prompts on stdin when the answer is
+ambiguous and calls `SystemExit` on failure, neither of which can happen inside
+a websocket handler. Only the filter and hint logic transfers; the shipped
+`list_candidate_ports()` returns candidates and lets the UI ask.
 
 Two things `probe.py` does not do, which `SerialSource` must:
 
@@ -92,8 +113,10 @@ Reads a CSV from `backend/calibration/` and replays it at wall clock speed
 through the identical interface. `is_live` returns **False**, so the honesty
 chip correctly shows it is not a live session.
 
-`tools/probe.py:302` already has `load()`, which parses these CSVs including the
-`#` header block and the `millis,adc_counts` columns. Reuse it.
+`probe.py:326` already has `load()`, which parses these CSVs including the
+`#` header block and the `millis,adc_counts` columns. Reuse it, minus its
+`_fail` path: that calls `SystemExit`, which would take down the server rather
+than the request.
 
 There are already four real traces in `backend/calibration/` to replay. Record
 a clean session while the hardware works and keep it as the demo trace.
@@ -104,7 +127,13 @@ This is the pivot from a grip device to a general strength and fatigue trainer,
 and Phase 2 supports it: effort grading and fatigue are not hand specific.
 
 Add a muscle field to the session model: `forearm_grip`, `biceps`, `calf`,
-`other`. Default `forearm_grip`.
+`other`. Default `forearm_grip`, which is also correct for every row recorded
+before the selector existed.
+
+**There is no `POST /api/sessions`.** Sessions are created entirely inside the
+websocket handler, at `app/api/signal.py:143`, so the muscle threads through
+the socket query params rather than a REST body: `signal.py` to
+`LiveSessionRunner` to the `Session(...)` construction.
 
 **The gating rule, and it is a clinical requirement rather than a preference:**
 
@@ -128,6 +157,14 @@ Implement the gate in the API layer so it cannot be bypassed by a frontend bug,
 and have the response omit the field rather than sending null, so a UI mistake
 cannot render a stale value.
 
+**Gating the structured fields is not sufficient on its own.**
+`percentile.py:198-206` and `:239-242` embed kilogram figures and EWGSOP2
+wording directly into `Explanation.summary`, which the UI renders verbatim at
+`ProgressPage.tsx:453` and `InsightsPage.tsx:66`. The shipped gate closes this
+by refusing at the endpoint, before `assess()` is ever called, so the prose is
+never generated for a non grip muscle. A test asserts no kilogram or EWGSOP2
+wording reaches a biceps patient's insights feed.
+
 ## Step 4: Per muscle calibration and %MVC
 
 %MVC is what makes the multi muscle pivot honest, and it needs a calibration
@@ -136,6 +173,18 @@ step per muscle per user.
 Record a maximum voluntary contraction: three maximal efforts, five seconds
 each, thirty seconds rest between, take the highest. Store it against the user
 and muscle. Every subsequent reading reports as a percentage of it.
+
+Two things this needs that are easy to miss. `Calibration` has **no muscle
+column**, and the deactivation logic at `signal.py:91-98` retires *all* active
+rows for a patient, so calibrating a biceps would silently clobber the grip
+calibration a kilogram estimate depends on. Both are fixed: the column exists
+and the deactivation is scoped by muscle.
+
+Also note `Session.strength_kg` was **never written by the live path** before
+Phase 3. The only writer was `app/seed.py:278`, and `ForceModel.predict` was
+never called in a request path at all, so the percentile endpoints worked only
+on seeded demo data. M3 now runs when the session closes, for grip only,
+anchored on the hardest window of the session.
 
 **Use the measured effort curve when designing the UI.** From
 `@docs/HARDWARE_FINDINGS.md`, the envelope response is strongly non linear:

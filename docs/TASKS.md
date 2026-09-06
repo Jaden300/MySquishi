@@ -66,16 +66,26 @@ Checkbox board. Update as work completes. Grouped by build phase - phases are or
 
 Tier A. Full scope and step by step in `@docs/PHASE3_GUIDE.md`.
 
-- [ ] `SerialSource` behind the same interface (500 Hz, 230400 baud, background reader)
-- [ ] Update the two Phase 2 guard tests in `app/tests/test_api.py`, do not delete them
-- [ ] `ReplaySource` + **record a good real session while hardware works** (demo insurance)
-- [ ] Signal pipeline tuned to Tier A: rep segmentation, force regression, spectral fatigue, rep quality
-- [ ] Graceful, *visible* degradation via the SQI badge
-- [ ] **Muscle selector** (forearm_grip / biceps / calf / other) on the session model
-- [ ] **Gate kg, EWGSOP2 and percentile to forearm_grip only**, enforced in the API layer
-- [ ] Per muscle MVC calibration, and %MVC reporting for every muscle
-- [ ] Effort mapped to display on a log or sqrt scale, three levels only
-- [ ] **Instruction page**: how to connect the sensor, for a first time user. Outline in `@docs/PHASE3_GUIDE.md`
+- [x] `SerialSource` behind the same interface (500 Hz, 230400 baud, background reader)
+- [x] Update the Phase 2 guard tests, do not delete them. There were **four**, not two: two in `app/tests/test_api.py` and two more in `app/tests/test_sources.py`. All four narrowed to permit `app/sources/serial_source.py` alone
+- [x] `ReplaySource`, replaying the four Phase 2 traces in `backend/calibration/`. `probe_20260905_214205.csv` is committed as the demo trace so replay works on a fresh clone
+- [x] Signal pipeline tuned to Tier A: rep segmentation, force regression, spectral fatigue, rep quality
+- [x] Graceful, *visible* degradation via the SQI badge. An unplugged sensor pads to a flat window rather than raising, so the badge collapses instead of the session
+- [x] **Muscle selector** (forearm_grip / biceps / calf / other) on the session model
+- [x] **Gate kg, EWGSOP2 and percentile to forearm_grip only**, enforced in the API layer. Fields are omitted rather than nulled, and the percentile prose is gated at its source so no kilogram figure reaches a non grip muscle
+- [x] Per muscle MVC calibration, and %MVC reporting for every muscle
+- [x] Effort mapped to display on a sqrt scale, three levels only (`frontend/src/lib/effort.ts`)
+- [x] **Instruction page**: how to connect the sensor, at `/connect`, with a live signal preview
+
+Two things Phase 3 fixed that were not on this list:
+
+- [x] `Session.strength_kg` was never written by the live path, only by the seeder. M3 now runs on close, for grip only
+- [x] Session duration used the global window size rather than the source's own, so a 500 Hz session reported double its real length
+
+Still open, needs the sensor attached:
+
+- [ ] Record a fresh demo trace while the hardware is connected. The Phase 2 traces work, but a purpose recorded clean session is better insurance
+- [ ] Re run `tools/probe.py` on biceps and calf to confirm the tier there, rather than assuming it carries over from the forearm
 
 ## Phase 4: Polish, stretch, submission
 

@@ -25,6 +25,10 @@ build/
 *.db
 *.sqlite
 *.sqlite3
+# New probe runs stay local by default. The four Phase 2 traces already in
+# backend/calibration/ are tracked deliberately: ReplaySource is the demo
+# insurance for when hardware fails, and insurance that only exists on the
+# machine that recorded it is not insurance.
 calibration/*.csv
 models/*.joblib
 models/*.pkl

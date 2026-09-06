@@ -20,6 +20,10 @@ Grip-strength rehabilitation companion. sEMG (MyoWare + Arduino) -> FastAPI/scik
 
 ## Docs
 
-`docs/WORKFLOW.md` · `TASKS.md` · `ARCHITECTURE.md` · `DESIGN.md` · `CLINICAL.md` · `ML.md` · `HARDWARE_CHECKLIST.md`
+`docs/WORKFLOW.md` · `TASKS.md` · `ARCHITECTURE.md` · `DESIGN.md` · `CLINICAL.md` · `ML.md` · `HARDWARE_CHECKLIST.md` · `HARDWARE_FINDINGS.md` · `PHASE3_GUIDE.md`
+
+Phase 2 is done: Tier A, effort resolvable, motion not. Read
+`@docs/HARDWARE_FINDINGS.md` before any hardware or metrics work, and
+`@docs/PHASE3_GUIDE.md` before starting Phase 3.
 
 Pull in with `@docs/<file>.md` when the task needs it. Keep this file minimal.

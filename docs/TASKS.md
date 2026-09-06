@@ -58,14 +58,24 @@ Checkbox board. Update as work completes. Grouped by build phase - phases are or
 - [x] `firmware/mysquishi_probe.ino` - analog read + serial print only
 - [x] `tools/probe.py` - standalone 60s diagnostic, prints tier verdict A/B/C/D
 - [x] `docs/HARDWARE_CHECKLIST.md` - placement, prep, wiring, failure modes, test protocol
-- [ ] **Builder runs the probe and reports the observed tier**
+- [x] `tools/gestures.py` - structured pose survey, held windows with countdowns
+- [x] **Builder runs the probe and reports the observed tier: A**
+- [x] `docs/HARDWARE_FINDINGS.md` - measured numbers and what they rule in and out
 
 ## Phase 3: Connect hardware, scaled to the observed tier
 
-- [ ] `SerialSource` behind the same interface
-- [ ] Signal pipeline tuned to the observed tier
-- [ ] Graceful, *visible* degradation via the SQI badge
+Tier A. Full scope and step by step in `@docs/PHASE3_GUIDE.md`.
+
+- [ ] `SerialSource` behind the same interface (500 Hz, 230400 baud, background reader)
+- [ ] Update the two Phase 2 guard tests in `app/tests/test_api.py`, do not delete them
 - [ ] `ReplaySource` + **record a good real session while hardware works** (demo insurance)
+- [ ] Signal pipeline tuned to Tier A: rep segmentation, force regression, spectral fatigue, rep quality
+- [ ] Graceful, *visible* degradation via the SQI badge
+- [ ] **Muscle selector** (forearm_grip / biceps / calf / other) on the session model
+- [ ] **Gate kg, EWGSOP2 and percentile to forearm_grip only**, enforced in the API layer
+- [ ] Per muscle MVC calibration, and %MVC reporting for every muscle
+- [ ] Effort mapped to display on a log or sqrt scale, three levels only
+- [ ] **Instruction page**: how to connect the sensor, for a first time user. Outline in `@docs/PHASE3_GUIDE.md`
 
 ## Phase 4: Polish, stretch, submission
 
@@ -82,3 +92,11 @@ Checkbox board. Update as work completes. Grouped by build phase - phases are or
 - [ ] Voice coaching
 - [ ] LLM weekly summary, grounded strictly in computed metrics
 - [ ] Squishi grip-driven game mode
+
+## Extensions (independent, none required)
+
+See §15 of `MySquishi_Plan.md`.
+
+- [ ] Mascot: animated Squishi driven by the live signal, frontend only
+- [ ] AI/ML layer beyond M1-M14, capability to be scoped before building
+- [ ] Camera detector: MediaPipe Hands, 21 landmarks at 30fps, browser only

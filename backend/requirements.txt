@@ -11,3 +11,9 @@ websockets
 reportlab
 pytest
 httpx
+
+# Phase 3. The live sensor reads from a serial port, and app/sources/
+# serial_source.py is the only module permitted to import this. Guard tests
+# enforce that, and import it lazily so a missing driver never breaks the
+# zero hardware demo path.
+pyserial

@@ -26,28 +26,38 @@ def client() -> TestClient:
         yield test_client
 
 
-class TestPhaseTwoHardStop:
-    """Phase 1 writes no serial port code."""
+class TestSerialStaysContained:
+    """Phase 3 opens exactly one door to the serial port.
 
-    def test_no_serial_imports(self) -> None:
-        """Fails the suite if serial appears anywhere under app/.
+    These guards were narrowed rather than removed. The boundary is still
+    worth enforcing: hardware code must live in the one module that owns it,
+    so it cannot spread through the application unnoticed.
+    """
 
-        This is what makes the hard stop before hardware bring up enforced
-        rather than merely remembered.
-        """
+    # The single module permitted to import pyserial, relative to app/.
+    SERIAL_MODULE = Path("sources") / "serial_source.py"
+
+    def test_no_serial_imports_outside_the_source_module(self) -> None:
+        """Fails the suite if serial appears anywhere else under app/."""
         offenders = []
         for path in APP_DIR.rglob("*.py"):
+            if path.relative_to(APP_DIR) == self.SERIAL_MODULE:
+                continue
             text = path.read_text(encoding="utf-8")
             for line in text.splitlines():
                 stripped = line.strip()
                 if stripped.startswith(("import serial", "from serial")):
                     offenders.append(f"{path.relative_to(BACKEND_DIR)}: {stripped}")
 
-        assert not offenders, f"serial imports found: {offenders}"
+        assert not offenders, (
+            f"serial imports found outside the source module: {offenders}"
+        )
 
-    def test_pyserial_is_not_a_dependency(self) -> None:
+    def test_pyserial_is_a_deliberate_dependency(self) -> None:
+        """Promoted from a probe only extra in Phase 3, on purpose. Asserting
+        its presence means it cannot silently vanish either."""
         requirements = (BACKEND_DIR / "requirements.txt").read_text(encoding="utf-8")
-        assert "pyserial" not in requirements.lower()
+        assert "pyserial" in requirements.lower()
 
 
 class TestHealth:
@@ -67,17 +77,16 @@ class TestHealth:
 
 
 class TestSources:
-    def test_lists_every_source_including_unavailable_ones(
-        self, client: TestClient
-    ) -> None:
-        """Sources that arrive later are listed but marked unavailable, so the
-        roadmap is visible rather than hidden."""
+    def test_lists_every_source_as_available(self, client: TestClient) -> None:
+        """All three sources exist as of Phase 3. Availability describes the
+        implementation, not whether a sensor happens to be plugged in: a live
+        source that cannot find its port says so on connect."""
         sources = client.get("/api/signal/sources").json()
         by_id = {s["id"]: s for s in sources}
 
         assert by_id["simulated"]["available"] is True
-        assert by_id["serial"]["available"] is False
-        assert by_id["replay"]["available"] is False
+        assert by_id["serial"]["available"] is True
+        assert by_id["replay"]["available"] is True
 
     def test_simulated_never_claims_to_be_live(self, client: TestClient) -> None:
         """The honesty chip derives from this field."""
@@ -204,17 +213,35 @@ class TestLiveWebsocket:
         assert detail["session"]["rep_count"] == summary["rep_count"]
         assert len(detail["reps"]) == summary["rep_count"]
 
-    def test_unavailable_source_says_so_rather_than_crashing(
+    def test_unknown_source_says_so_rather_than_crashing(
         self, client: TestClient
     ) -> None:
-        """A source that arrives in Phase 3 is a normal condition today."""
+        """An unrecognised source is a normal condition, not a crash."""
         with client.websocket_connect(
-            "/api/signal/live?source=serial&patient_id=demo"
+            "/api/signal/live?source=telepathy&patient_id=demo"
         ) as ws:
             message = json.loads(ws.receive_text())
 
         assert message["type"] == "error"
-        assert "Phase 3" in message["message"]
+        assert "unknown source" in message["message"]
+
+    def test_missing_sensor_says_what_to_do(self, client: TestClient) -> None:
+        """With no sensor attached, asking for a live session must explain how
+        to attach one. The demo path stays usable either way."""
+        from app.sources import serial_source
+
+        original = serial_source.discover_port
+        serial_source.discover_port = lambda: None
+        try:
+            with client.websocket_connect(
+                "/api/signal/live?source=serial&patient_id=demo"
+            ) as ws:
+                message = json.loads(ws.receive_text())
+        finally:
+            serial_source.discover_port = original
+
+        assert message["type"] == "error"
+        assert "No serial port found" in message["message"]
 
     def test_stored_reps_carry_a_quality_interval(self, client: TestClient) -> None:
         with client.websocket_connect(

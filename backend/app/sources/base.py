@@ -5,16 +5,18 @@ structural Protocol, so a new implementation needs no base class and no edits
 to any consumer: it only has to have the right shape and be registered in the
 factory below.
 
-Three implementations are planned:
+Three implementations exist:
 
-- SimulatedSource, the synthetic generator. Phase 1. Always available.
-- SerialSource, the real MyoWare over USB. Phase 3, and only to the fidelity
-  the Phase 2 hardware bring up justifies.
-- ReplaySource, a recorded session from CSV. Phase 3, as demo insurance.
+- SimulatedSource, the synthetic generator. Always available, and a permanent
+  first class feature rather than a fallback.
+- SerialSource, the real MyoWare over USB at 500 Hz, scoped to the fidelity the
+  Phase 2 bring up justifies. See docs/HARDWARE_FINDINGS.md.
+- ReplaySource, a recorded session from CSV, as demo insurance.
 
-**Phase 1 writes no serial port code.** A test asserts that `serial` appears
-nowhere under app/, so the hard stop before hardware bring up is enforced
-rather than merely remembered. See docs/ARCHITECTURE.md.
+`app/sources/serial_source.py` is the only module in the application permitted
+to import pyserial. Guard tests scan the rest of `app/` and still fail on a
+serial import anywhere else, so hardware code cannot leak in unnoticed. See
+docs/ARCHITECTURE.md.
 """
 
 from __future__ import annotations
@@ -86,15 +88,15 @@ SOURCE_CATALOGUE: tuple[SourceInfo, ...] = (
         id="serial",
         label="Live sensor",
         is_live=True,
-        available=False,
-        note="Requires hardware bring up. Arrives in Phase 3.",
+        available=True,
+        note="MyoWare over USB at 500 Hz. Needs the sensor connected.",
     ),
     SourceInfo(
         id="replay",
         label="Replay",
         is_live=False,
-        available=False,
-        note="Plays back a recorded session. Arrives in Phase 3.",
+        available=True,
+        note="Plays back a recorded session. No hardware required.",
     ),
 )
 
@@ -109,18 +111,25 @@ def get_source(source_id: str, **kwargs: object) -> SignalSource:
     The single construction point for the whole application. Phase 3 adds its
     implementations here and nothing else changes.
     """
+    # Every import here is deferred so the module graph stays acyclic: each
+    # implementation imports the Protocol from this module. Deferring the
+    # serial import additionally keeps pyserial off the application's startup
+    # path, so a missing driver is an error when a live session is requested
+    # rather than at boot.
     if source_id == "simulated":
-        # Imported here so the module graph stays acyclic: simulated.py
-        # imports the Protocol from this module.
         from app.sources.simulated import SimulatedSource
 
         return SimulatedSource(**kwargs)  # type: ignore[arg-type]
 
-    known = {info.id for info in SOURCE_CATALOGUE}
-    if source_id in known:
-        raise NotImplementedError(
-            f"source '{source_id}' is not available yet. "
-            "Live and replay sources arrive in Phase 3, after hardware bring up."
-        )
+    if source_id == "serial":
+        from app.sources.serial_source import SerialSource
 
+        return SerialSource(**kwargs)  # type: ignore[arg-type]
+
+    if source_id == "replay":
+        from app.sources.replay_source import ReplaySource
+
+        return ReplaySource(**kwargs)  # type: ignore[arg-type]
+
+    known = {info.id for info in SOURCE_CATALOGUE}
     raise ValueError(f"unknown source '{source_id}'. Known sources: {sorted(known)}")

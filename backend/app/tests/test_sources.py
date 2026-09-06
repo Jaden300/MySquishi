@@ -36,17 +36,15 @@ class TestProtocolConformance:
         with pytest.raises(ValueError, match="unknown source"):
             get_source("telepathy")
 
-    def test_phase_3_sources_are_declared_but_not_yet_built(self) -> None:
-        """They appear in the catalogue so the roadmap is visible, but
-        constructing one is an explicit error rather than a silent fallback
-        to simulation."""
-        for source_id in ("serial", "replay"):
-            with pytest.raises(NotImplementedError, match="Phase 3"):
-                get_source(source_id)
+    def test_every_catalogue_source_can_be_constructed(self) -> None:
+        """Construction must not touch hardware. A source only opens its port
+        on connect(), so building one is always safe."""
+        for info in list_sources():
+            assert isinstance(get_source(info.id), SignalSource)
 
-    def test_catalogue_marks_only_simulated_available(self) -> None:
+    def test_catalogue_marks_all_three_available(self) -> None:
         available = {info.id for info in list_sources() if info.available}
-        assert available == {"simulated"}
+        assert available == {"simulated", "serial", "replay"}
 
     def test_catalogue_entries_are_fully_described(self) -> None:
         for info in SOURCE_CATALOGUE:
@@ -143,24 +141,47 @@ class TestSimulatedSource:
         assert 0.5 < elapsed < 1.5, f"took {elapsed:.2f}s"
 
 
-class TestPhaseTwoHardStop:
-    """Phase 1 ships with zero hardware code. This is enforced, not trusted."""
+class TestSerialStaysContained:
+    """Phase 3 opens exactly one door to the serial port, not a general
+    permission. These guards narrowed rather than disappeared: hardware code
+    must not spread beyond the one module that owns it."""
 
-    def test_no_serial_imports_anywhere_in_the_app(self) -> None:
+    # The single module permitted to import pyserial.
+    SERIAL_MODULE = ("sources", "serial_source.py")
+
+    def test_only_serial_source_imports_serial(self) -> None:
         pattern = re.compile(r"^\s*(import\s+serial|from\s+serial\b)", re.MULTILINE)
         offenders = []
 
         for path in APP_DIR.rglob("*.py"):
             if "tests" in path.parts:
                 continue
+            if path.parts[-2:] == self.SERIAL_MODULE:
+                continue
             if pattern.search(path.read_text(encoding="utf-8")):
                 offenders.append(str(path.relative_to(APP_DIR)))
 
         assert not offenders, (
-            f"serial imports found in {offenders}. Phase 1 ships no hardware "
-            "code: serial support arrives in Phase 3, after bring up."
+            f"serial imports found in {offenders}. Only "
+            "app/sources/serial_source.py may talk to a serial port, so the "
+            "hardware boundary stays a boundary."
         )
 
-    def test_pyserial_is_not_a_dependency(self) -> None:
+    def test_serial_source_imports_pyserial_lazily(self) -> None:
+        """A missing driver must surface when a live session is requested, not
+        at application import, or the zero hardware demo path breaks."""
+        source = APP_DIR / "sources" / "serial_source.py"
+        text = source.read_text(encoding="utf-8")
+
+        module_level = re.compile(r"^(import\s+serial|from\s+serial\b)", re.MULTILINE)
+        assert not module_level.search(text), (
+            "pyserial is imported at module level in serial_source.py. It must "
+            "be imported inside a function so app import never needs it."
+        )
+        assert "import serial" in text, "expected a deferred pyserial import"
+
+    def test_pyserial_is_a_deliberate_dependency(self) -> None:
+        """Phase 3 promotes pyserial from a probe only extra to a real
+        dependency. Pinned here on purpose, so it cannot arrive by accident."""
         requirements = (APP_DIR.parent / "requirements.txt").read_text(encoding="utf-8")
-        assert "pyserial" not in requirements.lower()
+        assert "pyserial" in requirements.lower()

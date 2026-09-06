@@ -15,6 +15,8 @@ from sqlmodel import Session as DbSession
 from sqlmodel import select
 
 from app.api.live import DEFAULT_MVC_REFERENCE_RMS, LiveSessionRunner, frame_json
+from app.clinical_gate import DEFAULT_MUSCLE, allows_kilograms
+from app.clinical_gate import normalize as normalize_muscle
 from app.db import get_session
 from app.ml import force
 from app.models import Calibration, Rep, Session
@@ -38,15 +40,11 @@ def get_sources() -> list[SourceOut]:
 @router.get("/calibration", response_model=CalibrationOut | None)
 def get_calibration(
     patient_id: str,
+    muscle: str = DEFAULT_MUSCLE,
     db: DbSession = Depends(get_session),
 ) -> Calibration | None:
-    """The active calibration for a patient, if there is one."""
-    return db.exec(
-        select(Calibration)
-        .where(Calibration.patient_id == patient_id)
-        .where(Calibration.is_active)
-        .order_by(Calibration.created_at.desc())  # type: ignore[union-attr]
-    ).first()
+    """The active calibration for a patient on one muscle, if there is one."""
+    return _active_calibration(db, patient_id, muscle)
 
 
 @router.post("/calibrate", response_model=CalibrationOut)
@@ -85,12 +83,17 @@ def calibrate(
     except (ValueError, KeyError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
-    # Only one calibration is active at a time. Superseded rows are kept so a
-    # past session can still be read against the calibration it was recorded
-    # under.
+    # Only one calibration is active per patient per muscle. Scoping the
+    # deactivation by muscle matters: a maximum voluntary contraction belongs
+    # to the muscle as well as the person, so calibrating a biceps must not
+    # retire the grip calibration that a kilogram estimate depends on.
+    # Superseded rows are kept so a past session can still be read against the
+    # calibration it was recorded under.
+    muscle = normalize_muscle(request.muscle)
     previous = db.exec(
         select(Calibration)
         .where(Calibration.patient_id == request.patient_id)
+        .where(Calibration.muscle == muscle)
         .where(Calibration.is_active)
     ).all()
     for row in previous:
@@ -99,6 +102,7 @@ def calibrate(
 
     calibration = Calibration(
         patient_id=request.patient_id,
+        muscle=muscle,
         mvc_reference_rms=request.mvc_reference_rms,
         reference_kg=request.reference_kg,
         force_model_json=model.to_json(),
@@ -112,10 +116,16 @@ def calibrate(
     return calibration
 
 
-def _active_calibration(db: DbSession, patient_id: str) -> Calibration | None:
+def _active_calibration(
+    db: DbSession,
+    patient_id: str,
+    muscle: str = DEFAULT_MUSCLE,
+) -> Calibration | None:
+    """The calibration in force for one patient on one muscle."""
     return db.exec(
         select(Calibration)
         .where(Calibration.patient_id == patient_id)
+        .where(Calibration.muscle == normalize_muscle(muscle))
         .where(Calibration.is_active)
         .order_by(Calibration.created_at.desc())  # type: ignore[union-attr]
     ).first()
@@ -147,6 +157,7 @@ def _persist(
     session.source_id = runner.source_id
     session.is_live = runner.is_live
     session.calibration_id = calibration_id
+    session.muscle = runner.muscle
 
     # Both flags derive from the source object rather than from anything the
     # caller passed in. A session recorded from the synthetic generator is
@@ -171,6 +182,26 @@ def _persist(
 
     hold_cvs = [float(r["features"]["hold_cv"]) for r in runner.reps]  # type: ignore[index]
     session.hold_cv_mean = float(np.mean(hold_cvs)) if hold_cvs else None
+
+    # M3's force estimate, in kilograms, and only ever for grip. The model maps
+    # this person's amplitude on this placement to kilograms; the EWGSOP2
+    # references it feeds are validated on hand dynamometry alone, so on any
+    # other muscle the field is left null and the gate omits it from responses.
+    # See app/clinical_gate.py.
+    session.strength_kg = None
+    if allows_kilograms(runner.muscle) and calibration_id is not None:
+        calibration = db.get(Calibration, calibration_id)
+        peak = runner.peak_window_features
+        if calibration is not None and peak is not None:
+            try:
+                model = force.ForceModel.from_json(calibration.force_model_json)
+                session.strength_kg = float(model.predict(peak).point)
+            except (ValueError, KeyError):
+                # A calibration fitted against different features cannot be
+                # applied to this session. No estimate is better than a wrong
+                # one, and the interval requirement means a bare guess is not
+                # an option either.
+                session.strength_kg = None
 
     db.add(session)
     db.commit()
@@ -206,6 +237,7 @@ async def live(
     patient_id: str = "demo",
     session_id: int | None = None,
     junkiness: float = 0.0,
+    muscle: str = DEFAULT_MUSCLE,
 ) -> None:
     """Stream a live session.
 
@@ -217,10 +249,14 @@ async def live(
     db_gen = get_session()
     db = next(db_gen)
 
-    calibration = _active_calibration(db, patient_id)
+    # The calibration is looked up per muscle, so a biceps session normalizes
+    # against the biceps maximum rather than borrowing the grip one.
+    selected_muscle = normalize_muscle(muscle)
+    calibration = _active_calibration(db, patient_id, selected_muscle)
     runner = LiveSessionRunner(
         source_id=source,
         patient_id=patient_id,
+        muscle=selected_muscle,
         mvc_reference_rms=(
             calibration.mvc_reference_rms if calibration else DEFAULT_MVC_REFERENCE_RMS
         ),
@@ -233,9 +269,12 @@ async def live(
 
     try:
         runner.connect()
-    except (NotImplementedError, ValueError) as exc:
-        # An unavailable source is a normal condition until Phase 3, not a
-        # crash. Say so plainly and close.
+    except (NotImplementedError, ValueError, RuntimeError) as exc:
+        # A sensor that is not plugged in, a trace that is not there, or an
+        # unrecognised source id are all normal conditions rather than crashes.
+        # SerialUnavailable and ReplayUnavailable are RuntimeErrors carrying an
+        # operator facing message, so pass it straight through: it says what to
+        # do next, which a stack trace does not.
         await websocket.send_text(
             json.dumps({"type": "error", "message": str(exc)})
         )

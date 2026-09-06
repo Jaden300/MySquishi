@@ -33,10 +33,11 @@ from datetime import datetime, timezone
 
 import numpy as np
 
+from app.clinical_gate import DEFAULT_MUSCLE
 from app.config import settings
 from app.ml import fatigue, force, quality, rep_quality
 from app.ml.registry import registry
-from app.signal.features import rep_features
+from app.signal.features import rep_features, window_features
 from app.signal.filters import preprocess
 from app.signal.segmentation import segment_reps
 
@@ -69,6 +70,7 @@ FRAME_KEYS: tuple[str, ...] = (
     "sqi",
     "is_live",
     "source_id",
+    "muscle",
     "calibrated",
     "rep_event",
     "coach",
@@ -168,6 +170,7 @@ class LiveSessionRunner:
 
     source_id: str = "simulated"
     patient_id: str = "demo"
+    muscle: str = DEFAULT_MUSCLE
     mvc_reference_rms: float = DEFAULT_MVC_REFERENCE_RMS
     calibrated: bool = False
     junkiness: float = 0.0
@@ -189,6 +192,13 @@ class LiveSessionRunner:
     sqi_values: list[float] = field(default_factory=list)
     mvc_values: list[float] = field(default_factory=list)
     coach: CoachState = field(default_factory=CoachState)
+
+    # Amplitude features from the hardest window of the session, which is what
+    # M3 turns into kilograms when the session closes. Held here because the
+    # force model wants rms, mav and waveform_length, and only window_features
+    # produces those: the per rep feature set describes effort shape instead.
+    peak_window_features: dict[str, float] | None = None
+    _peak_window_rms: float = -1.0
 
     def __post_init__(self) -> None:
         self._m1 = registry.try_load("M1")
@@ -216,6 +226,21 @@ class LiveSessionRunner:
     @property
     def sample_rate(self) -> int:
         return int(self.source.sample_rate) if self.source else settings.sample_rate
+
+    @property
+    def window_samples(self) -> int:
+        """The source's own window size, not the global default.
+
+        Sources do not agree on this: the simulator runs 200 samples at
+        1000 Hz while the sensor runs 100 at 500 Hz. Both are 200 ms, and
+        reading it from the source is what keeps session duration correct
+        whichever one is selected.
+        """
+        if self.source is not None:
+            declared = getattr(self.source, "window_samples", None)
+            if isinstance(declared, int) and declared > 0:
+                return declared
+        return settings.window_samples
 
     @property
     def is_live(self) -> bool:
@@ -257,6 +282,10 @@ class LiveSessionRunner:
         sqi_value = float(sqi_assessment.score.point)
         self.sqi_values.append(sqi_value)
 
+        # Keep the amplitude features of the hardest window seen. M3 reads
+        # these on close to estimate force in kilograms, for grip only.
+        self._track_peak_window(window, fs, window_rms)
+
         self._freeze_baseline(envelope, fs)
         rep_event = self._detect_rep(result, envelope, fs)
 
@@ -271,6 +300,7 @@ class LiveSessionRunner:
             "sqi": round(sqi_value, 1),
             "is_live": self.is_live,
             "source_id": self.source_id,
+            "muscle": self.muscle,
             "calibrated": self.calibrated,
             "rep_event": rep_event,
             "coach": self.coach.update(t, mvc_pct),
@@ -403,6 +433,21 @@ class LiveSessionRunner:
             "feedback": scored.feedback,
         }
 
+    def _track_peak_window(
+        self, window: np.ndarray, fs: int, window_rms: float
+    ) -> None:
+        """Remember the amplitude features of the hardest window so far.
+
+        The peak is the right anchor for a force estimate: calibration asks the
+        patient for a maximal effort and records what it was worth, so the
+        session's own maximum is the comparable quantity.
+        """
+        if window.size == 0 or window_rms <= self._peak_window_rms:
+            return
+
+        self._peak_window_rms = window_rms
+        self.peak_window_features = window_features(window, fs)
+
     # -- close -------------------------------------------------------------
 
     def summary(self) -> dict[str, object]:
@@ -435,13 +480,14 @@ class LiveSessionRunner:
             "peak_mvc": round(float(np.max(self.mvc_values)), 2) if self.mvc_values else 0.0,
             "mean_rep_quality": round(float(np.mean(qualities)), 1) if qualities else None,
             "sqi_mean": round(float(np.mean(self.sqi_values)), 1) if self.sqi_values else None,
-            "duration_s": round(self.seq * settings.window_samples / self.sample_rate, 1),
+            "duration_s": round(self.seq * self.window_samples / self.sample_rate, 1),
             "total_impulse": round(
                 sum(float(r["features"]["impulse"]) for r in self.reps), 2  # type: ignore[index]
             ),
             "fatigue": fatigue_payload,
             "is_live": self.is_live,
             "source_id": self.source_id,
+            "muscle": self.muscle,
             "calibrated": self.calibrated,
             "reps": [
                 {

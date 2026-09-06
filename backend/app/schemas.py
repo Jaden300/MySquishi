@@ -17,8 +17,9 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_serializer
 
+from app.clinical_gate import DEFAULT_MUSCLE, allows_kilograms
 from app.ml.explain import Explanation, Factor, Interval
 
 
@@ -152,6 +153,7 @@ class SessionSummaryOut(BaseModel):
     source_id: str
     is_live: bool
     is_synthetic: bool
+    muscle: str = DEFAULT_MUSCLE
 
     borg: int | None = None
     quickdash_score: float | None = None
@@ -176,6 +178,20 @@ class SessionSummaryOut(BaseModel):
     adherence_gap_days: float | None = None
 
     model_config = {"from_attributes": True}
+
+    @model_serializer(mode="wrap")
+    def _gate_kilograms(self, handler):  # type: ignore[no-untyped-def]
+        """Drop strength_kg entirely on a non grip muscle.
+
+        Omitted rather than nulled, deliberately. A null still occupies the
+        field and a UI that renders a stale value into it would be making a
+        clinical claim the measurement does not support. An absent key cannot
+        be rendered at all. See app/clinical_gate.py.
+        """
+        data = handler(self)
+        if not allows_kilograms(self.muscle):
+            data.pop("strength_kg", None)
+        return data
 
 
 class RepOut(BaseModel):
@@ -219,6 +235,7 @@ class CalibrationOut(BaseModel):
     id: int
     patient_id: str
     created_at: datetime
+    muscle: str = DEFAULT_MUSCLE
     mvc_reference_rms: float
     reference_kg: float
     r_squared: float
@@ -241,6 +258,10 @@ class CalibrationRequest(BaseModel):
     feature_rows: list[dict[str, float]]
     reference_kg: float
     mvc_reference_rms: float
+
+    # A maximum voluntary contraction belongs to a muscle as well as a person,
+    # so calibrations are held one per patient per muscle.
+    muscle: str = DEFAULT_MUSCLE
 
 
 class SourceOut(BaseModel):

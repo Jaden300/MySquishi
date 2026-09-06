@@ -27,6 +27,8 @@ from datetime import date, datetime, timezone
 
 from sqlmodel import Field, SQLModel
 
+from app.clinical_gate import DEFAULT_MUSCLE
+
 
 def _utcnow() -> datetime:
     """Timezone aware creation timestamp."""
@@ -84,6 +86,12 @@ class Calibration(SQLModel, table=True):
     patient_id: str = Field(foreign_key="patient.id", index=True)
     created_at: datetime = Field(default_factory=_utcnow)
 
+    # Which muscle this calibration was measured on. A maximum voluntary
+    # contraction is specific to the muscle as well as the person, so a biceps
+    # calibration says nothing about grip. One calibration stays active per
+    # patient per muscle rather than per patient.
+    muscle: str = Field(default=DEFAULT_MUSCLE, index=True)
+
     # The maximum voluntary contraction reference. Every percent MVC in the
     # system divides by this one number, server side. See docs/ARCHITECTURE.md.
     mvc_reference_rms: float
@@ -99,9 +107,9 @@ class Calibration(SQLModel, table=True):
     r_squared: float = 0.0
     n_points: int = 0
 
-    # Only one calibration is active per patient. Superseded rows are kept so
-    # a session can still be interpreted against the calibration in force when
-    # it was recorded.
+    # Only one calibration is active per patient per muscle. Superseded rows
+    # are kept so a session can still be interpreted against the calibration in
+    # force when it was recorded.
     is_active: bool = True
     is_synthetic: bool = False
 
@@ -126,6 +134,13 @@ class Session(SQLModel, table=True):
     source_id: str = "simulated"
     is_live: bool = False
     is_synthetic: bool = False
+
+    # Which muscle was trained. Phase 2 found that effort grading and fatigue
+    # are properties of motor unit recruitment and so generalize to any
+    # skeletal muscle, while kilograms and EWGSOP2 are validated on hand
+    # dynamometry alone. This field is what gates that distinction. See
+    # app/clinical_gate.py and docs/HARDWARE_FINDINGS.md.
+    muscle: str = Field(default=DEFAULT_MUSCLE, index=True)
 
     # M8's prescription for this session, as JSON: targets plus the reasons
     # the rule engine gave for them.

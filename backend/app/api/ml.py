@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session as DbSession
 from sqlmodel import select
 
+from app.clinical_gate import NON_GRIP_NOTE, is_grip
 from app.db import get_session
 from app.ml import (
     adherence,
@@ -300,16 +301,27 @@ def get_percentile(
     patient_id: str,
     db: DbSession = Depends(get_session),
 ) -> PredictionOut:
-    """M14. Always synthetic: the reference population is generated."""
+    """M14. Always synthetic: the reference population is generated.
+
+    Grip only. The EWGSOP2 thresholds this places a patient against are
+    sarcopenia references validated on hand dynamometry, so the comparison is
+    meaningless for a biceps or a calf. Only grip sessions are considered, and
+    a patient with none gets a 404 rather than a percentile against the wrong
+    reference. See app/clinical_gate.py.
+    """
     patient = _patient(db, patient_id)
-    sessions = _completed(db, patient_id)
+    sessions = [s for s in _completed(db, patient_id) if is_grip(s.muscle)]
     latest = next(
         (s.strength_kg for s in reversed(sessions) if s.strength_kg is not None), None
     )
 
     if latest is None:
         raise HTTPException(
-            status_code=404, detail="No strength estimate to place in context yet."
+            status_code=404,
+            detail=(
+                "No grip strength estimate to place in context yet. "
+                + NON_GRIP_NOTE
+            ),
         )
 
     artifact = registry.try_load("M14")

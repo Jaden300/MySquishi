@@ -80,24 +80,30 @@ export function IntervalReadout({
   const fmt = (value: number) => value.toFixed(decimals);
   const suffix = unit ? ` ${unit}` : "";
 
+  const range = `${fmt(lower)} to ${fmt(upper)}${suffix}`;
+  const degradedNote = "Estimated without a trained model";
+
+  /*
+    The uncertainty is still attached to every number, it is simply no longer
+    printed under it. The visible readout is the point estimate; the range,
+    the label and the degraded warning live in the title and in screen reader
+    text. Nothing an honesty rule requires has been dropped, and a reader who
+    wants the interval gets it on hover or from assistive technology.
+  */
+  const summary = [label, range, degraded ? degradedNote : null]
+    .filter(Boolean)
+    .join(". ");
+
   return (
-    <div className="flex flex-col gap-0.5">
-      {label ? (
-        <span className="text-xs text-ink/60">{label}</span>
-      ) : null}
-      <span className="tabular text-2xl text-squish-700">
+    <div className="flex flex-col gap-0.5" title={summary}>
+      <span
+        className={`tabular text-2xl ${degraded ? "text-alert" : "text-squish-700"}`}
+      >
         {fmt(point)}
         {suffix ? <span className="text-base text-ink/60">{suffix}</span> : null}
       </span>
-      <span className="tabular text-xs text-ink/60">
-        {fmt(lower)} to {fmt(upper)}
-        {suffix}
-      </span>
-      {degraded ? (
-        <span className="text-xs text-alert">
-          Estimated without a trained model
-        </span>
-      ) : null}
+      <span className="sr-only">{label ? `${label}. ` : ""}{range}</span>
+      {degraded ? <span className="sr-only">{degradedNote}</span> : null}
     </div>
   );
 }

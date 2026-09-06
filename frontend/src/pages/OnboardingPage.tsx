@@ -57,12 +57,9 @@ export function OnboardingPage() {
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-6">
       <header className="flex items-center gap-4">
-        <SquishiMascot value={12} size={72} />
+        <SquishiMascot value={12} size={72} pose="waving" />
         <div>
           <h1 className="text-xl text-squish-700">Let us set things up</h1>
-          <p className="text-sm text-ink/60">
-            A few details so your readings mean something.
-          </p>
         </div>
       </header>
 
@@ -181,11 +178,13 @@ function Field({
   hint?: string;
   children: React.ReactNode;
 }) {
+  // Hints ride on the label as a tooltip rather than printing beneath the
+  // field, which keeps the form free of standing explanatory text.
   return (
-    <label className="flex flex-col gap-1.5">
+    <label className="flex flex-col gap-1.5" title={hint}>
       <span className="text-sm text-ink">{label}</span>
       {children}
-      {hint ? <span className="text-xs text-ink/60">{hint}</span> : null}
+      {hint ? <span className="sr-only">{hint}</span> : null}
     </label>
   );
 }

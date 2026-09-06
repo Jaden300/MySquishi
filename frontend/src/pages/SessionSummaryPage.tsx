@@ -223,9 +223,12 @@ function Stat({
   value: number | null | undefined;
   unit?: string;
 }) {
+  // A stat tile still needs to say what it counts, so the label is kept: it
+  // names the number rather than explaining it, which is the distinction
+  // between a caption and a heading.
   return (
-    <div className="rounded-card border border-squish-100 bg-mist p-4">
-      <p className="text-xs text-ink/60">{label}</p>
+    <div className="brand-watermark brand-watermark-sm rounded-card border border-squish-100 bg-mist p-4">
+      <p className="text-sm text-ink/70">{label}</p>
       <p className="tabular text-2xl text-squish-700">
         {value == null ? "-" : value.toFixed(value % 1 === 0 ? 0 : 1)}
         {unit}
@@ -240,12 +243,13 @@ function AfterSession({ sessionId }: { sessionId: number }) {
   const [saved, setSaved] = useState(false);
 
   return (
-    <section className="rounded-panel border border-squish-100 bg-mist p-5">
-      <h2 className="text-sm font-medium text-squish-700">How did that feel?</h2>
-      <p className="mt-1 text-xs text-ink/60">
-        Rate your effort from 0 to 10. Comparing this against what was measured
-        is itself informative.
-      </p>
+    <section className="brand-watermark rounded-panel border border-squish-100 bg-mist p-5">
+      <h2
+        className="text-sm font-medium text-squish-700"
+        title="Rate your effort from 0 to 10. Comparing this against what was measured is itself informative."
+      >
+        How did that feel?
+      </h2>
 
       <div className="mt-3 flex flex-wrap gap-2">
         {Array.from({ length: 11 }, (_, i) => (
@@ -269,8 +273,12 @@ function AfterSession({ sessionId }: { sessionId: number }) {
         ))}
       </div>
 
+      {/* The selected button is the visible confirmation. The word is kept for
+          screen readers, which have no pressed state to see. */}
       {saved ? (
-        <p className="mt-2 text-xs text-good">Saved.</p>
+        <p role="status" className="sr-only">
+          Saved.
+        </p>
       ) : null}
     </section>
   );

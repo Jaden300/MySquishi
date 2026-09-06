@@ -42,11 +42,6 @@ export function LandingPage() {
         </Link>
       </div>
 
-      <p className="text-sm text-ink/60">
-        Works with no hardware attached. The simulator is a permanent feature,
-        not a fallback.
-      </p>
-
     </div>
   );
 }

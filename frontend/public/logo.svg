@@ -1,11 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="MySquishi">
   <defs>
     <linearGradient id="bgViolet" x1="0.1" y1="0" x2="0.9" y2="1">
       <stop offset="0" stop-color="#AC9AF7" />
       <stop offset="1" stop-color="#7A66DD" />
     </linearGradient>
   </defs>
-  <rect width="1024" height="1024" fill="url(#bgViolet)" />
+  <rect width="1024" height="1024" rx="236" fill="url(#bgViolet)" />
   <path
     d="M512,336 C700,336 800,444 800,562 C800,692 690,764 512,764 C334,764 224,692 224,562 C224,444 324,336 512,336 Z"
     fill="#FFB6A6"

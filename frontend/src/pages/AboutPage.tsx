@@ -9,6 +9,7 @@
 import { api } from "../lib/api";
 import { useApi } from "../lib/useApi";
 import { SyntheticBadge } from "../components/Honesty";
+import { SquishiMark } from "../components/brand/SquishiMark";
 
 export function AboutPage() {
   const models = useApi(() => api.models(), []);
@@ -58,7 +59,10 @@ export function AboutPage() {
         <h2 className="text-sm font-medium text-squish-700">The models</h2>
 
         {models.loading ? (
-          <p className="text-sm text-ink/60">Loading model records...</p>
+          <div role="status" className="flex items-center gap-2">
+            <SquishiMark size={22} className="animate-pulse opacity-50" />
+            <span className="sr-only">Loading model records</span>
+          </div>
         ) : null}
 
         {models.error ? (

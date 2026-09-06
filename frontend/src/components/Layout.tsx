@@ -6,6 +6,8 @@ import { Component, type ReactNode } from "react";
 import { Link, NavLink, Outlet, useRouteError } from "react-router-dom";
 
 import { NotAMedicalDevice } from "./Honesty";
+import { SquishiMark } from "./brand/SquishiMark";
+import { Wordmark } from "./brand/Wordmark";
 
 const NAV = [
   { to: "/session", label: "Session" },
@@ -19,11 +21,11 @@ const NAV = [
 
 export function Layout() {
   return (
-    <div className="min-h-screen bg-squish-50">
-      <header className="border-b border-squish-100 bg-mist">
+    <div className="brand-ground min-h-screen">
+      <header className="border-b border-squish-100 bg-mist/80 backdrop-blur">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 sm:px-6">
-          <Link to="/" className="text-lg text-squish-700">
-            MySquishi
+          <Link to="/" className="shrink-0">
+            <Wordmark size={20} />
           </Link>
           <nav className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
             {NAV.map((item) => (
@@ -47,7 +49,8 @@ export function Layout() {
         <Outlet />
       </main>
 
-      <footer className="mx-auto max-w-6xl px-4 pb-10 sm:px-6">
+      <footer className="mx-auto flex max-w-6xl items-center gap-2 px-4 pb-10 sm:px-6">
+        <SquishiMark size={18} className="shrink-0 opacity-40" />
         <NotAMedicalDevice />
       </footer>
     </div>

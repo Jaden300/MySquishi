@@ -54,9 +54,6 @@ export function ClinicianPage() {
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl text-squish-700">Clinician view</h1>
-          <p className="text-sm text-ink/60">
-            Session level measures across the programme.
-          </p>
         </div>
         {rows.some((r) => r.is_synthetic) ? <SyntheticBadge /> : null}
       </header>

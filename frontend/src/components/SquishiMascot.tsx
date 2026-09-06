@@ -14,18 +14,37 @@
  * Under prefers-reduced-motion the spring is *replaced* by a discrete four
  * state swap, not merely shortened. That is a separate branch below rather
  * than a zero duration.
+ *
+ * The artwork comes from the shared pose library. Poses in that library carry
+ * their own squash transforms, so the animated branch suppresses those and
+ * drives the geometry itself: applying both would compound the two scales and
+ * flatten the blob.
  */
 
 import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 
 import { selectMvcPct, useLiveStore } from "../store/live";
+import { PoseArt } from "./brand/PoseArt";
+import type { PoseId } from "./brand/poses";
 import {
   EXPRESSION_DESCRIPTION,
   PROUD_MS,
   expressionFor,
   type Expression,
 } from "../lib/expression";
+
+/**
+ * The four expression states map onto four of the twenty poses. The mapping
+ * lives here rather than in expression.ts so the thresholds stay testable
+ * without importing any artwork.
+ */
+const POSE_FOR_EXPRESSION: Record<Expression, PoseId> = {
+  resting: "idle",
+  working: "midSqueeze",
+  straining: "compressed",
+  proud: "cheering",
+};
 
 export interface SquishiMascotProps {
   /**
@@ -35,12 +54,18 @@ export interface SquishiMascotProps {
   value?: number;
   size?: number;
   className?: string;
+  /**
+   * Pins Squishi to one pose from the library, for the static placements that
+   * illustrate rather than report. Effort still drives the accessible name.
+   */
+  pose?: PoseId;
 }
 
 export function SquishiMascot({
   value,
   size = 160,
   className = "",
+  pose,
 }: SquishiMascotProps) {
   // Exactly one selector. This is the whole point of the flat scalar in the
   // store: nothing else here re-renders when a frame arrives.
@@ -71,11 +96,19 @@ export function SquishiMascot({
   const expression = expressionFor(mvcPct, justFinishedRep);
   const effort = Math.max(0, Math.min(100, mvcPct)) / 100;
 
+  const activePose = pose ?? POSE_FOR_EXPRESSION[expression];
+
   // Squash and stretch: compressing vertically while widening horizontally
   // preserves apparent volume, which is what makes it read as squishy rather
-  // than simply smaller.
-  const scaleY = 1 - 0.35 * effort;
-  const scaleX = 1 + 0.25 * effort;
+  // than simply smaller. The pose artwork already sits at a comfortable size
+  // in its 200 unit box, so the deformation here is gentler than the authored
+  // extremes: past about a quarter the blob stops reading as a face.
+  const scaleY = 1 - 0.24 * effort;
+  const scaleX = 1 + 0.18 * effort;
+
+  // A pinned pose is a still illustration, so it keeps the artwork's own
+  // squash and skips the live spring entirely.
+  const animated = pose === undefined && !reduceMotion;
 
   return (
     <div
@@ -83,29 +116,43 @@ export function SquishiMascot({
       role="img"
       aria-label={EXPRESSION_DESCRIPTION[expression]}
       data-expression={expression}
+      data-pose={activePose}
     >
       <svg
         width={size}
         height={size}
-        viewBox="0 0 100 100"
+        viewBox="0 0 200 200"
         aria-hidden="true"
         style={{ overflow: "visible" }}
       >
-        {reduceMotion ? (
-          // Discrete swap. No spring, no idle motion, four fixed states.
-          <g transform={`translate(50 62) scale(${discrete(effort)})`}>
-            <Body expression={expression} />
-          </g>
-        ) : (
+        {animated ? (
           <motion.g
-            style={{ originX: "50px", originY: "88px" }}
+            /*
+              The pivot is the blob's own base, so squashing presses it down
+              onto that line rather than shrinking it toward the middle of the
+              frame. Arms are inside this group, so they travel with the body
+              instead of detaching from it.
+            */
+            style={{ originX: "100px", originY: "160px" }}
             animate={{ scaleX, scaleY }}
             transition={{ type: "spring", stiffness: 300, damping: 20 }}
           >
-            <g transform="translate(50 62)">
-              <Body expression={expression} />
-            </g>
+            {/*
+              bodyTransform null suppresses the pose's authored squash, so the
+              spring above is the only thing scaling the character, and the
+              arms come from idle so they stay readable at full compression.
+            */}
+            <PoseArt pose={activePose} bodyTransform={null} armsFrom="idle" />
           </motion.g>
+        ) : pose === undefined ? (
+          // Discrete swap. No spring, no idle motion, four fixed states.
+          <g
+            transform={`translate(100 160) scale(${discrete(effort)}) translate(-100 -160)`}
+          >
+            <PoseArt pose={activePose} bodyTransform={null} armsFrom="idle" />
+          </g>
+        ) : (
+          <PoseArt pose={activePose} />
         )}
       </svg>
     </div>
@@ -118,57 +165,4 @@ function discrete(effort: number): string {
   if (effort < 0.4) return "1.08 0.92";
   if (effort <= 0.8) return "1.16 0.84";
   return "1.25 0.75";
-}
-
-function Body({ expression }: { expression: Expression }) {
-  const eyeY = expression === "straining" ? -6 : -8;
-
-  return (
-    <>
-      <ellipse cx="0" cy="0" rx="34" ry="30" fill="var(--squish-300)" />
-      <ellipse cx="0" cy="-6" rx="26" ry="20" fill="var(--squish-100)" opacity="0.5" />
-
-      {expression === "straining" ? (
-        <>
-          <path d="M -18 -14 L -6 -10" stroke="var(--squish-700)" strokeWidth="2.5" strokeLinecap="round" fill="none" />
-          <path d="M 18 -14 L 6 -10" stroke="var(--squish-700)" strokeWidth="2.5" strokeLinecap="round" fill="none" />
-        </>
-      ) : null}
-
-      {expression === "proud" ? (
-        <>
-          <path d="M -16 -8 q 5 -6 10 0" stroke="var(--squish-700)" strokeWidth="3" strokeLinecap="round" fill="none" />
-          <path d="M 6 -8 q 5 -6 10 0" stroke="var(--squish-700)" strokeWidth="3" strokeLinecap="round" fill="none" />
-        </>
-      ) : (
-        <>
-          <circle cx="-11" cy={eyeY} r="3.5" fill="var(--squish-700)" />
-          <circle cx="11" cy={eyeY} r="3.5" fill="var(--squish-700)" />
-        </>
-      )}
-
-      <Mouth expression={expression} />
-    </>
-  );
-}
-
-function Mouth({ expression }: { expression: Expression }) {
-  const stroke = "var(--squish-700)";
-  const common = {
-    stroke,
-    strokeWidth: 2.5,
-    strokeLinecap: "round" as const,
-    fill: "none",
-  };
-
-  if (expression === "proud") {
-    return <path d="M -10 6 q 10 9 20 0" {...common} />;
-  }
-  if (expression === "straining") {
-    return <ellipse cx="0" cy="9" rx="6" ry="4.5" fill={stroke} />;
-  }
-  if (expression === "working") {
-    return <path d="M -7 7 q 7 5 14 0" {...common} />;
-  }
-  return <path d="M -6 7 h 12" {...common} />;
 }

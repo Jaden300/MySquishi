@@ -28,18 +28,18 @@ export function InsightsPage() {
     <div className="flex flex-col gap-6">
       <header>
         <h1 className="text-xl text-squish-700">Insights</h1>
-        <p className="text-sm text-ink/60">
-          What your sessions suggest, and why.
-        </p>
       </header>
 
       {insights.loading || prescription.loading ? (
-        <p className="text-sm text-ink/60">Working it out...</p>
+        <div role="status" className="flex items-center gap-2">
+          <SquishiMascot value={8} size={40} pose="thinking" />
+          <span className="sr-only">Working it out</span>
+        </div>
       ) : null}
 
       {cards.length === 0 && !insights.loading ? (
-        <div className="flex flex-col items-center gap-3 rounded-panel border border-squish-100 bg-mist p-10 text-center">
-          <SquishiMascot value={8} size={110} />
+        <div className="brand-watermark flex flex-col items-center gap-3 rounded-panel border border-squish-100 bg-mist p-10 text-center">
+          <SquishiMascot value={8} size={110} pose="presenting" />
           <p className="text-sm text-ink/70">
             Complete a few sessions and insights will start appearing here.
           </p>
@@ -60,15 +60,21 @@ function InsightCard({ prediction }: { prediction: Prediction }) {
   const readout = readoutFor(prediction);
 
   return (
-    <article className="rounded-panel border border-squish-100 bg-mist p-5">
+    <article className="brand-watermark brand-watermark-sm rounded-panel border border-squish-100 bg-mist p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
+        <div
+          className="min-w-0 flex-1"
+          title={
+            prediction.degraded
+              ? "Produced without a trained model, using transparent rules."
+              : undefined
+          }
+        >
           <p className="text-ink">{prediction.explanation.summary}</p>
-
           {prediction.degraded ? (
-            <p className="mt-1 text-xs text-alert">
+            <span className="sr-only">
               Produced without a trained model, using transparent rules.
-            </p>
+            </span>
           ) : null}
         </div>
 
@@ -110,8 +116,17 @@ function WhyThis({
   explanation: Explanation;
   trainedAt: string | null;
 }) {
+  // The method line is provenance for a drawer the reader deliberately
+  // opened, so it stays available, but on the drawer rather than printed as a
+  // footnote inside it.
+  const method = `Method: ${explanation.method || "not recorded"}${
+    trainedAt
+      ? `. Model trained ${new Date(trainedAt).toLocaleDateString()}.`
+      : "."
+  }`;
+
   return (
-    <div className="mt-3 rounded-card bg-squish-50 p-4 text-sm">
+    <div className="mt-3 rounded-card bg-squish-50 p-4 text-sm" title={method}>
       {explanation.factors.length > 0 ? (
         <ul className="flex flex-col gap-1.5">
           {explanation.factors.map((factor) => (
@@ -129,12 +144,7 @@ function WhyThis({
         </ul>
       ) : null}
 
-      <p className="mt-3 text-xs text-ink/60">
-        Method: {explanation.method || "not recorded"}
-        {trainedAt
-          ? `. Model trained ${new Date(trainedAt).toLocaleDateString()}.`
-          : "."}
-      </p>
+      <span className="sr-only">{method}</span>
     </div>
   );
 }

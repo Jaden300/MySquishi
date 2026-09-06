@@ -51,9 +51,6 @@ export function SessionPage() {
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl text-squish-700">Session</h1>
-          <p className="text-sm text-ink/60">
-            Squeeze and hold when Squishi asks. Rest between repetitions.
-          </p>
         </div>
         <div className="flex items-center gap-3">
           <SourceChip isLive={isLive} />
@@ -112,8 +109,8 @@ export function SessionPage() {
         {/* Only the synthetic generator has a noise dial to turn. On a real
             sensor the quality badge reacts to the electrodes themselves. */}
         {source === "simulated" ? (
-          <label className="ml-auto flex items-center gap-2 text-xs text-ink/60">
-            Signal noise
+          <label className="ml-auto flex items-center gap-2 text-sm text-ink/70">
+            <span className="sr-only">Signal noise</span>
             <input
               type="range"
               min={0}
@@ -129,7 +126,7 @@ export function SessionPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
-        <div className="flex flex-col items-center gap-4 rounded-panel border border-squish-100 bg-mist p-6">
+        <div className="brand-watermark flex flex-col items-center gap-4 rounded-panel border border-squish-100 bg-mist p-6">
           <SquishiMascot />
           <CoachPrompt />
           <SignalQualityBadge />

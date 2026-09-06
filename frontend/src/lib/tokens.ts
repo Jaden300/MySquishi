@@ -6,15 +6,15 @@
  */
 
 export const tokens = {
-  squish50: "#F2F9FE",
-  squish100: "#DCEEFB",
-  squish300: "#7DC5F0",
-  squish500: "#2E9BDB",
-  squish700: "#1B6C9E",
-  ink: "#132430",
+  squish50: "#F7F5FE",
+  squish100: "#E6E1FA",
+  squish300: "#AC9AF7",
+  squish500: "#7A66DD",
+  squish700: "#4B3B96",
+  ink: "#2A2320",
   mist: "#FFFFFF",
-  alert: "#E8825A",
-  good: "#4FBFA0",
+  alert: "#EF5346",
+  good: "#17A88F",
 } as const;
 
 /** Maps a token key to the CSS custom property name it mirrors. */

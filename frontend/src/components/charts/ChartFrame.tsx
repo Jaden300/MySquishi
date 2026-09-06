@@ -10,6 +10,7 @@
 import type { ReactNode } from "react";
 
 import { ClinicalTooltip, SyntheticBadge } from "../Honesty";
+import { SquishiMark } from "../brand/SquishiMark";
 
 export interface ChartFrameProps {
   title: string;
@@ -17,6 +18,11 @@ export interface ChartFrameProps {
   unit?: string;
   /** A clinical term to define on hover, keyed into docs/CLINICAL.md. */
   tooltipTerm?: string;
+  /**
+   * Context for the chart. Carried on the heading as a tooltip rather than
+   * printed underneath it: the captions were visual noise, so what survives
+   * is available on hover and to assistive technology.
+   */
   description?: string;
 
   loading?: boolean;
@@ -47,9 +53,9 @@ export function ChartFrame({
   children,
 }: ChartFrameProps) {
   return (
-    <section className="rounded-panel border border-squish-100 bg-mist p-5">
+    <section className="brand-watermark brand-watermark-sm rounded-panel border border-squish-100 bg-mist p-5">
       <header className="mb-4 flex items-start justify-between gap-3">
-        <div className="min-w-0">
+        <div className="min-w-0" title={description}>
           <h3 className="text-sm font-medium text-squish-700">
             {tooltipTerm ? (
               <ClinicalTooltip term={tooltipTerm}>{title}</ClinicalTooltip>
@@ -60,9 +66,6 @@ export function ChartFrame({
               <span className="ml-1 text-xs text-ink/50">({unit})</span>
             ) : null}
           </h3>
-          {description ? (
-            <p className="mt-1 text-xs text-ink/60">{description}</p>
-          ) : null}
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {isSynthetic ? <SyntheticBadge /> : null}
@@ -137,7 +140,8 @@ function ChartBody({
   if (isEmpty) {
     // Empty states invite action rather than reporting absence.
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-1 text-center">
+      <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
+        <SquishiMark size={44} className="opacity-30" />
         <p className="text-sm text-ink/70">
           {emptyMessage ?? "Nothing here yet."}
         </p>

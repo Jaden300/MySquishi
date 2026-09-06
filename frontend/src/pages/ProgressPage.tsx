@@ -61,9 +61,6 @@ export function ProgressPage() {
     <div className="flex flex-col gap-6">
       <header>
         <h1 className="text-xl text-squish-700">Progress</h1>
-        <p className="text-sm text-ink/60">
-          How your grip strength is changing, and what that suggests.
-        </p>
       </header>
 
       <StrengthTrendChart
@@ -223,9 +220,6 @@ function GoalCard({
           </span>
           <span className="text-sm text-ink/60">
             of {goal?.target_kg?.toFixed(1) ?? "-"} kg goal
-          </span>
-          <span className="text-xs text-ink/60">
-            Started at {goal?.baseline_kg?.toFixed(1) ?? "-"} kg
           </span>
         </div>
       </div>

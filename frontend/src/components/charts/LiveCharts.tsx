@@ -209,14 +209,10 @@ export function SignalQualityBadge() {
       <span
         className="rounded-full px-2 py-0.5 text-xs"
         style={{ backgroundColor: `${colour}22`, color: tokens.ink }}
+        title={sqi < 60 ? "Check the electrodes are firmly attached." : undefined}
       >
         {band}
       </span>
-      {sqi < 60 ? (
-        <p className="text-xs text-ink/60">
-          Check the electrodes are firmly attached.
-        </p>
-      ) : null}
     </div>
   );
 }

@@ -141,7 +141,23 @@ export function CalibratePage() {
 
   return (
     <div className="mx-auto flex max-w-xl flex-col items-center gap-6 text-center">
-      <SquishiMascot value={stage === "maximum" ? mvcPct : 20} size={150} />
+      {/* Squishi tracks the stage: live during a trial, and a fitting still
+          pose the rest of the time. */}
+      <SquishiMascot
+        value={stage === "maximum" ? mvcPct : 20}
+        size={150}
+        pose={
+          stage === "maximum"
+            ? undefined
+            : stage === "rest"
+              ? "resting"
+              : stage === "done"
+                ? "celebrating"
+                : stage === "reference"
+                  ? "explaining"
+                  : "encouraging"
+        }
+      />
 
       {stage === "intro" ? (
         <>
@@ -150,10 +166,6 @@ export function CalibratePage() {
             Everything in MySquishi is measured against your own strongest
             effort, so we need to see it. Three tries of about five seconds
             each, with a rest in between, and we keep the best one.
-          </p>
-          <p className="text-sm text-ink/60">
-            Calibrating: {muscleLabel(muscle)}. Change the muscle on the session
-            page if that is not what you are training.
           </p>
           <button
             type="button"
@@ -226,9 +238,9 @@ export function CalibratePage() {
             className="input tabular max-w-[10rem] text-center"
             placeholder="25"
             aria-label="Your grip strength in kilograms"
+            title={KG_ESTIMATE_NOTE}
           />
-
-          <p className="text-xs text-ink/60">{KG_ESTIMATE_NOTE}</p>
+          <span className="sr-only">{KG_ESTIMATE_NOTE}</span>
 
           {error ? (
             <p role="alert" className="text-sm text-alert">
@@ -259,7 +271,7 @@ export function CalibratePage() {
             Best of {TRIALS} tries: {best.toFixed(0)} percent.
           </p>
           {!wantsKilograms ? (
-            <p className="text-xs text-ink/60">{NON_GRIP_NOTE}</p>
+            <span className="sr-only">{NON_GRIP_NOTE}</span>
           ) : null}
           <button
             type="button"

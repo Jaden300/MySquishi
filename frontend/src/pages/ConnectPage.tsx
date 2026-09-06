@@ -159,7 +159,7 @@ function SignalPreview() {
         ) : null}
 
         {status === "running" ? (
-          <div className="flex items-center gap-3 text-xs text-ink/60">
+          <div className="flex items-center gap-3 text-sm text-ink/70">
             <SourceChip isLive={isLive} />
             <span className="tabular">Signal quality {sqi.toFixed(0)}</span>
           </div>
@@ -192,9 +192,6 @@ export function ConnectPage() {
     <div className="flex flex-col gap-6">
       <header>
         <h1 className="text-xl text-squish-700">Connect your sensor</h1>
-        <p className="text-sm text-ink/60">
-          Eight steps, about ten minutes the first time.
-        </p>
       </header>
 
       {/* Simulation is a first class feature and a selling point, so it is
@@ -260,10 +257,6 @@ export function ConnectPage() {
 
       <section className="rounded-panel border border-squish-100 bg-mist p-4">
         <h2 className="text-base text-squish-700">Where the electrodes go</h2>
-        <p className="mt-1 text-sm text-ink/60">
-          Two on the muscle belly 2 cm apart along the fibres, one on nearby
-          bone.
-        </p>
         <dl className="mt-3 flex flex-col gap-3">
           {MUSCLES.map((muscle) => (
             <div key={muscle}>

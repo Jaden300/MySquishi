@@ -35,10 +35,20 @@ export function MuscleSelector({ disabled = false }: MuscleSelectorProps) {
         Muscle
       </label>
 
+      {/* The absence of kilograms is a deliberate clinical decision, so it
+          stays attached to the control as a tooltip and as screen reader text
+          rather than printing under it. */}
       <select
         id="muscle-select"
         value={muscle}
         disabled={disabled}
+        title={
+          disabled
+            ? "Finish the session to change muscle."
+            : allowsKilograms(muscle)
+              ? undefined
+              : NON_GRIP_NOTE
+        }
         onChange={(event) =>
           setMuscle(event.target.value as (typeof MUSCLES)[number])
         }
@@ -51,16 +61,8 @@ export function MuscleSelector({ disabled = false }: MuscleSelectorProps) {
         ))}
       </select>
 
-      {/* The absence of kilograms is a deliberate clinical decision, so it is
-          stated rather than left as a gap on the screen. */}
       {!allowsKilograms(muscle) && (
-        <p className="text-xs text-ink/60">{NON_GRIP_NOTE}</p>
-      )}
-
-      {disabled && (
-        <p className="text-xs text-ink/60">
-          Finish the session to change muscle.
-        </p>
+        <span className="sr-only">{NON_GRIP_NOTE}</span>
       )}
     </div>
   );

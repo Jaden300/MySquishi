@@ -54,6 +54,18 @@ def _completed(db: DbSession, patient_id: str) -> list[Session]:
     )
 
 
+def _cached_insight(
+    db: DbSession, patient_id: str, model_id: str, key: str
+) -> InsightCache | None:
+    """The memoized row for this patient, model and key, if one is there."""
+    return db.exec(
+        select(InsightCache)
+        .where(InsightCache.patient_id == patient_id)
+        .where(InsightCache.model_id == model_id)
+        .where(InsightCache.key == key)
+    ).first()
+
+
 def _wrap(
     model_id: str,
     value: object,
@@ -108,12 +120,7 @@ def get_forecast(
     # Memoized on patient and completed session count, per docs/ML.md: the
     # cached forecast stays valid until another session lands.
     key = f"{patient_id}:{len(strengths)}"
-    cached = db.exec(
-        select(InsightCache)
-        .where(InsightCache.patient_id == patient_id)
-        .where(InsightCache.model_id == "M9")
-        .where(InsightCache.key == key)
-    ).first()
+    cached = _cached_insight(db, patient_id, "M9", key)
 
     if cached:
         payload = json.loads(cached.payload_json)
@@ -137,7 +144,14 @@ def get_forecast(
     explanation = trajectory.explanation
     assert isinstance(explanation, Explanation)
 
-    if not trajectory.insufficient_data:
+    # Only cache a real fit, and only if no concurrent request beat us to it.
+    # Several requests can miss the cache together and each fit independently.
+    # This check skips the common case; the unique constraint on InsightCache
+    # is what actually settles the race, since checking and inserting are not
+    # atomic and both requests can pass the check.
+    if not trajectory.insufficient_data and not _cached_insight(
+        db, patient_id, "M9", key
+    ):
         db.add(
             InsightCache(
                 patient_id=patient_id,
@@ -155,7 +169,12 @@ def get_forecast(
                 ),
             )
         )
-        db.commit()
+        try:
+            db.commit()
+        except Exception:  # noqa: BLE001
+            # The answer is already computed, so losing the race to write it
+            # down is not a reason to fail the request. The next caller refits.
+            db.rollback()
 
     # M9 fits per request and has no artifact, so it is never degraded in the
     # sense the flag means: there is no trained model it is standing in for.

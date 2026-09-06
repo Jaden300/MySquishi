@@ -120,12 +120,65 @@ npm run dev
 Open http://localhost:5173. The database seeds itself with a demo patient on
 first start, so the dashboard has history to show immediately.
 
+The schema is created with `create_all`, which creates missing tables but never
+alters existing ones. There is no migration tool, so after a change to a table
+definition a database created before that change keeps the old schema. Delete
+`backend/data/mysquishi.db` and restart to pick it up: the demo reseeds itself.
+
 ### Tests
 
+The test runner is not in `requirements.txt`, so that a deployed instance does
+not install one. Add it once:
+
 ```bash
-cd backend  && .venv/bin/python -m pytest    # 410 tests
+cd backend && .venv/bin/pip install -r requirements-dev.txt
+```
+
+```bash
+cd backend  && .venv/bin/python -m pytest    # 413 tests
 cd frontend && npm run test && npm run build #  52 tests
 ```
+
+## Deploying
+
+One Render web service serves both the API and the built frontend. That is the
+whole configuration: the frontend requests `/api` as a relative path and opens
+its websocket at `window.location.host`, so a shared origin means there is no
+API URL to set, no CORS origin to keep in sync, and `wss:` follows from `https:`
+on its own.
+
+The blueprint is `render.yaml` at the repository root.
+
+1. Push the branch to GitHub.
+2. On Render, choose **New > Blueprint** and point it at the repository. It
+   reads `render.yaml` and fills in the build and start commands. If you would
+   rather not use a blueprint, choose **New > Web Service** and copy the
+   `buildCommand` and `startCommand` out of that file by hand.
+3. Wait for the first build. It is slow, a few minutes: it installs SciPy and
+   scikit-learn and builds the frontend.
+4. Open the `onrender.com` URL. The dashboard, the forecast and the live session
+   all work on that one origin.
+
+The trained models and the synthetic cohort are committed, so the build is a
+plain install with no training step. The SQLite database is not committed:
+Render's filesystem is ephemeral, and the app reseeds the demo patient on every
+boot. Anything a visitor saves is gone on the next deploy, which is the right
+behaviour for a demo but worth knowing.
+
+### Keeping it awake
+
+A free Render service sleeps after about 15 minutes idle, and the next visitor
+waits through a cold start. An external monitor polling `/api/health` prevents
+that:
+
+- **UptimeRobot**: add an **HTTP(s)** monitor for
+  `https://<your-app>.onrender.com/api/health` on a 5 minute interval.
+- **cron-job.org** does the same job if you prefer it.
+
+One caveat. Render's free tier allows 750 instance hours a month and a service
+kept permanently awake burns about 730, so this uses nearly the whole allowance
+and a second free service would go over. The paid Starter tier does not sleep at
+all, which removes the need for the monitor entirely.
 
 ## Connecting the sensor
 

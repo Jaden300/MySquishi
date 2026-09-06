@@ -25,6 +25,7 @@ from __future__ import annotations
 
 from datetime import date, datetime, timezone
 
+from sqlalchemy import UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 from app.clinical_gate import DEFAULT_MUSCLE
@@ -254,7 +255,19 @@ class InsightCache(SQLModel, table=True):
     and session count, so the key is exactly that: the cached value is valid
     until the patient completes another session, at which point the key
     changes and the forecast is refitted.
+
+    One row per patient, model and key, enforced by the database rather than by
+    the caller. Requests that miss the cache together all fit and all try to
+    write, and an application level check cannot close that window because the
+    check and the insert are not atomic. The constraint makes the loser of the
+    race fail its insert, which the endpoint absorbs.
     """
+
+    __table_args__ = (
+        UniqueConstraint(
+            "patient_id", "model_id", "key", name="uq_insightcache_patient_model_key"
+        ),
+    )
 
     id: int | None = Field(default=None, primary_key=True)
     patient_id: str = Field(foreign_key="patient.id", index=True)

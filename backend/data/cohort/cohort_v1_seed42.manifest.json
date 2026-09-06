@@ -1,0 +1,6 @@
+{
+  "version": "v1",
+  "seed": 42,
+  "n_patients": 300,
+  "n_sessions": 9330
+}

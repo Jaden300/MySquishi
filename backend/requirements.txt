@@ -9,8 +9,6 @@ joblib
 pydantic-settings
 websockets
 reportlab
-pytest
-httpx
 
 # Phase 3. The live sensor reads from a serial port, and app/sources/
 # serial_source.py is the only module permitted to import this. Guard tests

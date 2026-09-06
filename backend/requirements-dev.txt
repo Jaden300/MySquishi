@@ -1,0 +1,9 @@
+# Test only dependencies. Kept out of requirements.txt so a deployed instance
+# does not install a test runner it will never call.
+#
+#     pip install -r requirements.txt -r requirements-dev.txt
+
+-r requirements.txt
+
+pytest
+httpx

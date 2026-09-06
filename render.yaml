@@ -1,0 +1,46 @@
+# Render Blueprint: one web service serving both the API and the built frontend.
+#
+# One service rather than two on purpose. The frontend talks to the API at the
+# relative path /api and opens its websocket at window.location.host, so sharing
+# an origin means there is no API URL to configure, no CORS origin to keep in
+# sync, and wss: follows from https: without a code change.
+#
+# A static host plus a separate API would need all three, and Vercel in
+# particular could not host this backend at all: the live session holds a
+# websocket open, which serverless functions do not do, and scikit-learn with
+# scipy and pandas is far past the bundle limit.
+
+services:
+  - type: web
+    name: mysquishi
+    runtime: python
+    plan: free
+    region: oregon
+
+    # Node is not the runtime here, only a build tool for the frontend. Render's
+    # Python image ships it, so the build installs both toolchains in turn.
+    buildCommand: |
+      set -o errexit
+      cd frontend
+      npm ci
+      npm run build
+      cd ../backend
+      pip install --upgrade pip
+      pip install -r requirements.txt
+
+    # $PORT is assigned by Render and must be honoured. Binding 0.0.0.0 rather
+    # than localhost is what makes the service reachable from outside the
+    # container.
+    startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+
+    # /api/health is a cheap liveness probe that already existed, and it is the
+    # same endpoint the external keep alive monitor should poll.
+    healthCheckPath: /api/health
+
+    envVars:
+      # Matches the local interpreter, and scikit-learn and scipy publish 3.13
+      # wheels, so the build resolves binaries rather than compiling from source.
+      - key: PYTHON_VERSION
+        value: "3.13.4"
+      - key: PIP_DISABLE_PIP_VERSION_CHECK
+        value: "1"

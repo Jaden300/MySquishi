@@ -1,0 +1,75 @@
+{
+  "artifact_version": "1",
+  "artifacts": {
+    "M1": {
+      "model_id": "M1",
+      "version": "1",
+      "trained_at": "2026-09-05T16:31:36+00:00",
+      "metric_name": "cv_accuracy",
+      "metric_value": 0.8396,
+      "cohort_version": "n/a",
+      "n_training_rows": 480,
+      "notes": "Trained on the generator's junkiness sweep rather than the cohort, so signal quality needs no patient history."
+    },
+    "M4": {
+      "model_id": "M4",
+      "version": "1",
+      "trained_at": "2026-09-05T16:31:37+00:00",
+      "metric_name": "cv_r2",
+      "metric_value": 0.9782,
+      "cohort_version": "n/a",
+      "n_training_rows": 1200,
+      "notes": "Trained on synthesized repetitions across the quality range, so scoring works from the first session."
+    },
+    "M12": {
+      "model_id": "M12",
+      "version": "1",
+      "trained_at": "2026-09-05T16:31:38+00:00",
+      "metric_name": "silhouette",
+      "metric_value": 0.2666,
+      "cohort_version": "v1",
+      "n_training_rows": 300,
+      "notes": "KMeans over scale free trajectory shape features. Archetype names are mapped from centroid geometry at fit time, never from cluster index."
+    },
+    "M6": {
+      "model_id": "M6",
+      "version": "1",
+      "trained_at": "2026-09-05T16:31:38+00:00",
+      "metric_name": "contamination",
+      "metric_value": 0.06,
+      "cohort_version": "v1",
+      "n_training_rows": 7197,
+      "notes": "Isolation Forest over session features. Direction is assigned against the patient's own trailing mean, so a standout session is not reported as a problem."
+    },
+    "M7": {
+      "model_id": "M7",
+      "version": "1",
+      "trained_at": "2026-09-05T16:31:38+00:00",
+      "metric_name": "cv_r2",
+      "metric_value": 0.3581,
+      "cohort_version": "v1",
+      "n_training_rows": 7197,
+      "notes": "Ridge predicting Borg CR10 from session measures. The residual, not the prediction, is what gets surfaced."
+    },
+    "M13": {
+      "model_id": "M13",
+      "version": "1",
+      "trained_at": "2026-09-05T16:31:39+00:00",
+      "metric_name": "cv_auc",
+      "metric_value": 0.6119,
+      "cohort_version": "v1",
+      "n_training_rows": 6597,
+      "notes": "Logistic regression on session cadence. The disengagement label is constructed from prescribed and completed dates, not read from a column."
+    },
+    "M14": {
+      "model_id": "M14",
+      "version": "1",
+      "trained_at": "2026-09-05T16:31:39+00:00",
+      "metric_name": "n_reference",
+      "metric_value": 300.0,
+      "cohort_version": "v1",
+      "n_training_rows": 300,
+      "notes": "Empirical percentile curves by age band and sex. Small cells are pooled across adjacent age bands and the result reports that it pooled."
+    }
+  }
+}

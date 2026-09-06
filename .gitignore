@@ -33,8 +33,14 @@ calibration/*.csv
 models/*.joblib
 models/*.pkl
 backend/data/*.db
-backend/data/models/
-backend/data/cohort/
+
+# The trained models and the synthetic cohort are tracked on purpose. A
+# deployed instance has no way to train them and no persistent disk to keep
+# them on, so the artifacts ship with the repo and the build stays a plain
+# install. The database is not tracked: main.py seeds it on startup, and on a
+# host with an ephemeral filesystem it is rebuilt on every boot anyway.
+!backend/data/models/
+!backend/data/cohort/
 
 # --- Env & secrets ---
 .env

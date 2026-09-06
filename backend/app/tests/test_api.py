@@ -8,12 +8,17 @@ test_sources.py: the boundary is worth guarding twice.
 from __future__ import annotations
 
 import json
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlmodel import Session as DbSession
+from sqlmodel import select
 
+from app.db import get_engine
 from app.main import app
+from app.models import InsightCache
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent.parent
 APP_DIR = BACKEND_DIR / "app"
@@ -190,6 +195,68 @@ class TestCalibration:
             },
         )
         assert response.status_code == 422
+
+
+class TestForecastCache:
+    """The forecast memoizes itself, and the write must stay a single row.
+
+    GET /api/ml/forecast/{id} fits on a cache miss and writes the result. Several
+    requests can miss together, and each used to insert its own row: reads take
+    .first() so the duplicates were tolerated rather than fatal, which is exactly
+    why the table grew unnoticed.
+    """
+
+    def _m9_rows(self) -> list[InsightCache]:
+        with DbSession(get_engine()) as db:
+            return list(
+                db.exec(
+                    select(InsightCache)
+                    .where(InsightCache.patient_id == "demo")
+                    .where(InsightCache.model_id == "M9")
+                ).all()
+            )
+
+    def _clear(self) -> None:
+        with DbSession(get_engine()) as db:
+            for row in db.exec(
+                select(InsightCache).where(InsightCache.model_id == "M9")
+            ).all():
+                db.delete(row)
+            db.commit()
+
+    def test_a_cold_cache_is_filled_once(self, client: TestClient) -> None:
+        self._clear()
+        assert client.get("/api/ml/forecast/demo").status_code == 200
+        assert len(self._m9_rows()) == 1
+
+    def test_concurrent_misses_do_not_duplicate_the_row(
+        self, client: TestClient
+    ) -> None:
+        """Six requests against a cold cache, all fitting at once."""
+        self._clear()
+
+        with ThreadPoolExecutor(max_workers=6) as pool:
+            responses = list(
+                pool.map(
+                    lambda _: client.get("/api/ml/forecast/demo"),
+                    range(6),
+                )
+            )
+
+        assert [r.status_code for r in responses] == [200] * 6
+        rows = self._m9_rows()
+        assert len(rows) == 1, f"expected one cached row, found {len(rows)}"
+
+    def test_a_warm_cache_is_served_without_another_write(
+        self, client: TestClient
+    ) -> None:
+        self._clear()
+        first = client.get("/api/ml/forecast/demo").json()
+        second = client.get("/api/ml/forecast/demo").json()
+
+        assert len(self._m9_rows()) == 1
+        assert first["value"]["winner"] == second["value"]["winner"]
+        assert first["value"]["forecast"] == second["value"]["forecast"]
 
 
 class TestLiveWebsocket:

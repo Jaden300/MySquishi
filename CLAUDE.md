@@ -6,7 +6,7 @@ Grip-strength rehabilitation companion. sEMG (MyoWare + Arduino) -> FastAPI/scik
 
 ## Stack
 
-- Frontend: React + Vite + TypeScript + Tailwind, Recharts, Zustand, Framer Motion (mascot only)
+- Frontend: React + Vite + TypeScript + Tailwind, Recharts, Zustand, Framer Motion (chrome only, never data: see `@docs/DESIGN.md`)
 - Backend: FastAPI + SQLModel/SQLite, scikit-learn, SciPy, NumPy, Pandas
 
 ## Non-negotiables

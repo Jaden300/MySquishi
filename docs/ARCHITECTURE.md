@@ -6,7 +6,7 @@ System design, the `SignalSource` boundary, and the module layout.
 
 ```
 React + Vite + TypeScript + Tailwind (frontend)
-Recharts . Framer Motion (Squishi only) . Zustand
+Recharts . Framer Motion (chrome only, never data) . Zustand
                   |
                   |  REST (sessions, history, ML) + WebSocket (live stream)
                   |
@@ -113,8 +113,11 @@ backend/app/
   export/    report.py csv_export.py
   tests/
 frontend/src/
-  lib/ types/ store/ components/ pages/
+  lib/ types/ store/ pages/
+  components/  ui/ brand/ charts/ figures/
 ```
+
+Four routes: `/` Home, `/train`, `/progress` (plus `/progress/session/:id`), `/lab`. Nine legacy paths redirect to whichever route absorbed them, and those redirects stay: three lines each, and a dead link in a demo is worse than a stale route. Train uses `?stage=`, Progress and Lab use `?tab=`, so refresh, browser back and deep links all work.
 
 Storage lives under `backend/data/`, all gitignored: `mysquishi.db`, `models/*.joblib` plus `manifest.json`, and `cohort/` plus its manifest.
 

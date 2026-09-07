@@ -75,7 +75,7 @@ Tier A. Full scope and step by step in `@docs/PHASE3_GUIDE.md`.
 - [x] **Gate kg, EWGSOP2 and percentile to forearm_grip only**, enforced in the API layer. Fields are omitted rather than nulled, and the percentile prose is gated at its source so no kilogram figure reaches a non grip muscle
 - [x] Per muscle MVC calibration, and %MVC reporting for every muscle
 - [x] Effort mapped to display on a sqrt scale, three levels only (`frontend/src/lib/effort.ts`)
-- [x] **Instruction page**: how to connect the sensor, at `/connect`, with a live signal preview
+- [x] **Instruction page**: how to connect the sensor, with a live signal preview. Was `/connect`; now the Hardware tab of `/lab` after the frontend revamp collapsed eleven routes to four
 
 Two things Phase 3 fixed that were not on this list:
 

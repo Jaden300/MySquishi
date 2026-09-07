@@ -37,13 +37,18 @@ import { ErrorBoundary } from "../components/Layout";
 import { PoseSpot } from "../components/brand/PoseSpot";
 import {
   Card,
+  Figure,
   PageHeader,
   StatTile,
   TabPanel,
   Tabs,
   type TabDef,
 } from "../components/ui";
-import { NON_GRIP_NOTE, allowsKilograms } from "../lib/muscle";
+import {
+  FATIGUE_BANDWIDTH_NOTE,
+  NON_GRIP_NOTE,
+  allowsKilograms,
+} from "../lib/muscle";
 import type { CohortPoint, Prediction, SessionSummary } from "../types/api";
 import { InsightsTab } from "./progress/InsightsTab";
 
@@ -234,6 +239,13 @@ export function ProgressPage() {
                 />
               </div>
 
+              <FatigueBySession
+                sessions={completed}
+                loading={sessions.loading}
+                error={sessions.error}
+                onRetry={sessions.reload}
+              />
+
               <CohortScatter
                 cohort={cohortPoints(archetype.data)}
                 you={archetypeCoordinates(archetype.data)}
@@ -389,6 +401,17 @@ function GoalCard({
             of {goal?.target_kg?.toFixed(1) ?? "-"} kg goal
           </span>
         </div>
+
+        {/* Only at the goal, so the pose is a fact about the data rather than
+            decoration. It carries a label for the same reason. */}
+        {pct >= 100 ? (
+          <PoseSpot
+            pose="thumbsUp"
+            size={64}
+            label="Squishi gives a thumbs up: you have reached your goal"
+            className="ml-auto"
+          />
+        ) : null}
       </div>
     </ChartFrame>
   );
@@ -440,6 +463,7 @@ function AdherenceHeatmap({
       title="Adherence"
       tooltipTerm="Adherence rate"
       description={`${done} of ${ordered.length} prescribed sessions completed.`}
+      action={<PoseSpot pose="stretching" size={56} motion="bob" />}
       loading={loading}
       error={error}
       onRetry={onRetry}
@@ -551,6 +575,79 @@ function CumulativeWork({
         </AreaChart>
       </ResponsiveContainer>
     </ChartFrame>
+  );
+}
+
+/**
+ * How hard each session ran you down.
+ *
+ * The fatigue slope is the drift in median frequency across a session: a
+ * steeper negative slope means the muscle tired faster. It was only ever
+ * visible inside one session's summary, so a patient could not see whether
+ * they are fatiguing less than they used to, which is the thing that actually
+ * changes over a course of rehabilitation.
+ *
+ * Sessions where the fit was poor are dropped rather than drawn faintly. A
+ * slope with an r squared near zero is noise, and noise plotted next to signal
+ * reads as signal.
+ */
+function FatigueBySession({
+  sessions,
+  loading,
+  error,
+  onRetry,
+}: {
+  sessions: SessionSummary[];
+  loading: boolean;
+  error: string | null;
+  onRetry: () => void;
+}) {
+  const data = sessions
+    .filter(
+      (s) =>
+        s.fatigue_slope != null &&
+        s.fatigue_r_squared != null &&
+        s.fatigue_r_squared >= 0.2,
+    )
+    .map((s, i) => ({
+      label: `S${i + 1}`,
+      // Negated, so a taller bar reads as more fatigue rather than requiring
+      // the reader to hold "more negative is worse" in their head.
+      fatigue: -(s.fatigue_slope as number),
+    }));
+
+  return (
+    <Figure
+      title="Fatigue per session"
+      source="measured"
+      pose="exhausted"
+      loading={loading}
+      error={error}
+      onRetry={onRetry}
+      isEmpty={data.length === 0}
+      emptyMessage="Fatigue appears once a few sessions have enough repetitions to fit a trend."
+      note={`Taller means the muscle tired faster within that session. Sessions where the trend did not fit are not shown. ${FATIGUE_BANDWIDTH_NOTE}`}
+    >
+      <div className="h-[220px] w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 4, left: 4 }}>
+            <CartesianGrid stroke={tokens.squish100} vertical={false} />
+            <XAxis dataKey="label" tick={chartText.tick} stroke={tokens.ink} />
+            <YAxis tick={chartText.tick} stroke={tokens.ink} />
+            <Tooltip
+              formatter={(value) => [Number(value).toFixed(3), "Fatigue rate"]}
+            />
+            <Area
+              type="monotone"
+              dataKey="fatigue"
+              stroke={tokens.alert}
+              fill={tokens.squish100}
+              isAnimationActive={false}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </Figure>
   );
 }
 

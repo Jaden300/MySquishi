@@ -35,6 +35,27 @@
   --squishi-accent: #46E0C6;
 }
 
+/*
+  Typefaces. Fraunces carries a SOFT axis that swells the letter terminals,
+  which is the same move the mascot's silhouette makes, so headings and the
+  character read as one drawing. Plus Jakarta Sans has a tall x height and
+  real tabular figures, which the numeric readouts depend on.
+
+  Kept in a separate block from the palette above: src/lib/tokens.test.ts
+  reads that block from disk and asserts the hex values, and these are not
+  colours.
+*/
+:root {
+  --font-display: "Fraunces Variable", Georgia, "Times New Roman", serif;
+  --font-body: "Plus Jakarta Sans Variable", ui-sans-serif, system-ui,
+    -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  /* One elevation token. docs/DESIGN.md prefers a hairline border to a
+     shadow, so this is used on at most three surfaces per page. */
+  --shadow-soft: 0 1px 2px rgba(42, 35, 32, 0.04),
+    0 12px 32px -18px rgba(75, 59, 150, 0.28);
+}
+
 @layer base {
   html {
     color-scheme: light;
@@ -43,9 +64,25 @@
   body {
     background-color: var(--squish-50);
     color: var(--ink);
-    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-      "Helvetica Neue", Arial, sans-serif;
+    font-family: var(--font-body);
+    font-size: 1.0625rem;
+    line-height: 1.6;
     -webkit-font-smoothing: antialiased;
+  }
+
+  /*
+    Set on the elements rather than only through utility classes, so a heading
+    that forgets its class still lands in the display face instead of silently
+    falling back to the body stack.
+  */
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-variation-settings: "SOFT" 60, "WONK" 1;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
   }
 
   /* Numbers are tabular so charts and tables do not jitter as values change. */
@@ -79,11 +116,12 @@
   /* One form control style, so every input matches without each page
      restating a dozen utility classes. */
   .input {
-    border-radius: 12px;
+    border-radius: 14px;
     border: 1px solid var(--squish-100);
     background-color: var(--mist);
-    padding: 0.5rem 0.75rem;
-    font-size: 0.875rem;
+    padding: 0.625rem 0.875rem;
+    font-family: var(--font-body);
+    font-size: 1.0625rem;
     color: var(--ink);
     width: 100%;
   }
@@ -117,23 +155,27 @@
     position: absolute;
     right: -28px;
     bottom: -34px;
-    width: 156px;
-    height: 131px;
+    width: 148px;
+    height: 148px;
     z-index: -1;
     pointer-events: none;
     opacity: 0.04;
     background-repeat: no-repeat;
     background-size: contain;
     background-position: bottom right;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 620 520'%3E%3Cpath d='M310,60 C498,60 598,168 598,286 C598,416 488,488 310,488 C132,488 22,416 22,286 C22,168 122,60 310,60 Z' fill='%234B3B96'/%3E%3C/svg%3E");
+    /* The same silhouette as BODY_PATH in src/components/brand/poses.ts, in
+       the same 200x200 box. A background image cannot import the component,
+       so this is the one copy of the shape that has to be kept in step by
+       hand. */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cpath d='M100,53 C142,53 162,77 162,103 C162,132 138,148 100,148 C62,148 38,132 38,103 C38,77 58,53 100,53 Z' fill='%234B3B96'/%3E%3C/svg%3E");
   }
 
   /* A smaller, quieter variant for dense cards. */
   .brand-watermark-sm::after {
-    width: 96px;
-    height: 81px;
+    width: 92px;
+    height: 92px;
     right: -18px;
-    bottom: -22px;
+    bottom: -26px;
     opacity: 0.035;
   }
 
@@ -153,8 +195,131 @@
         48rem 34rem at 6% 12%,
         rgba(255, 182, 166, 0.11),
         transparent 62%
+      ),
+      radial-gradient(
+        54rem 38rem at 50% 108%,
+        rgba(70, 224, 198, 0.07),
+        transparent 66%
       );
-    background-attachment: fixed;
+  }
+
+  /* A fixed attachment costs a repaint per scroll frame on iOS, and the wash
+     is decorative, so only desktop pays for it. */
+  @media (min-width: 768px) {
+    .brand-ground {
+      background-attachment: fixed;
+    }
+  }
+}
+
+/*
+  Motion utilities.
+
+  Named classes rather than inline animations so every moving thing in the app
+  is greppable. All of these are CSS animations, which the reduced motion block
+  at the foot of this file already neutralises. Motion driven from JavaScript
+  guards on useReducedMotion() instead, because Framer writes inline transforms
+  that a CSS rule cannot reach.
+*/
+@layer utilities {
+  @keyframes squish-rise {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .rise {
+    animation: squish-rise 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .rise-delay-1 { animation-delay: 60ms; }
+  .rise-delay-2 { animation-delay: 120ms; }
+  .rise-delay-3 { animation-delay: 180ms; }
+  .rise-delay-4 { animation-delay: 240ms; }
+  .rise-delay-5 { animation-delay: 300ms; }
+  .rise-delay-6 { animation-delay: 360ms; }
+
+  /* Idle float for decorative poses. Deliberately slow, so it reads as the
+     character breathing rather than as an animation demanding attention. */
+  @keyframes squish-bob {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-6px);
+    }
+  }
+
+  .bob {
+    animation: squish-bob 4.5s ease-in-out infinite;
+  }
+
+  /* Background blobs. Three instances run at different periods so they never
+     visibly sync up. */
+  @keyframes squish-drift {
+    0%,
+    100% {
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+    50% {
+      transform: translate3d(14px, -18px, 0) scale(1.04);
+    }
+  }
+
+  .drift {
+    animation: squish-drift 16s ease-in-out infinite;
+  }
+
+  .drift-slow {
+    animation: squish-drift 24s ease-in-out infinite reverse;
+  }
+
+  /* Draws a stroked path on, for the goal ring and the signal pipeline. The
+     dash geometry is set per element; only the sweep lives here. */
+  @keyframes squish-draw {
+    from {
+      stroke-dashoffset: var(--draw-from, 100%);
+    }
+    to {
+      stroke-dashoffset: var(--draw-to, 0);
+    }
+  }
+
+  .draw-on {
+    animation: squish-draw 820ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  /* Signal travelling along the pipeline connectors. */
+  @keyframes squish-flow {
+    to {
+      stroke-dashoffset: -24;
+    }
+  }
+
+  .flow {
+    animation: squish-flow 1.4s linear infinite;
+  }
+
+  /* One expanding ring behind the mascot when a repetition closes. */
+  @keyframes squish-pulse-ring {
+    from {
+      opacity: 0.45;
+      transform: scale(0.72);
+    }
+    to {
+      opacity: 0;
+      transform: scale(1.5);
+    }
+  }
+
+  .pulse-ring {
+    animation: squish-pulse-ring 620ms ease-out both;
   }
 }
 

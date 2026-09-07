@@ -7,6 +7,7 @@
  * trained the card says so rather than hiding.
  */
 
+import type { CSSProperties } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   Area,
@@ -39,6 +40,7 @@ import {
   Card,
   Figure,
   PageHeader,
+  Reveal,
   StatTile,
   TabPanel,
   Tabs,
@@ -211,13 +213,15 @@ export function ProgressPage() {
                 backend refuses the data too. See docs/CLINICAL.md.
               */}
               {latestKg != null ? (
-                <PercentileHistogram
-                  data={cohort.data}
-                  yourKg={latestKg}
-                  loading={cohort.loading || patient.loading}
-                  error={cohort.error}
-                  onRetry={cohort.reload}
-                />
+                <Reveal>
+                  <PercentileHistogram
+                    data={cohort.data}
+                    yourKg={latestKg}
+                    loading={cohort.loading || patient.loading}
+                    error={cohort.error}
+                    onRetry={cohort.reload}
+                  />
+                </Reveal>
               ) : null}
             </div>
           ) : null}
@@ -239,21 +243,25 @@ export function ProgressPage() {
                 />
               </div>
 
-              <FatigueBySession
-                sessions={completed}
-                loading={sessions.loading}
-                error={sessions.error}
-                onRetry={sessions.reload}
-              />
+              <Reveal>
+                <FatigueBySession
+                  sessions={completed}
+                  loading={sessions.loading}
+                  error={sessions.error}
+                  onRetry={sessions.reload}
+                />
+              </Reveal>
 
-              <CohortScatter
-                cohort={cohortPoints(archetype.data)}
-                you={archetypeCoordinates(archetype.data)}
-                yourArchetype={archetypeId(archetype.data)}
-                loading={archetype.loading}
-                error={archetype.error}
-                onRetry={archetype.reload}
-              />
+              <Reveal>
+                <CohortScatter
+                  cohort={cohortPoints(archetype.data)}
+                  you={archetypeCoordinates(archetype.data)}
+                  yourArchetype={archetypeId(archetype.data)}
+                  loading={archetype.loading}
+                  error={archetype.error}
+                  onRetry={archetype.reload}
+                />
+              </Reveal>
 
               {/* Only drawn when a changepoint was actually detected, so the
                   slumped pose means something rather than decorating a page. */}
@@ -426,6 +434,12 @@ function ProgressRing({ percent }: { percent: number }) {
     <svg width="110" height="110" viewBox="0 0 110 110" role="img"
       aria-label={`${percent.toFixed(0)} percent of the way to your goal`}>
       <circle cx="55" cy="55" r={radius} fill="none" stroke={tokens.squish100} strokeWidth="10" />
+      {/*
+        Drawn on with a dashoffset sweep rather than appearing complete. The
+        arc is chrome: it ends at the value the data says and never overshoots
+        it, so nothing about the number is animated, only its reveal. The
+        global reduced motion block stops the sweep and leaves the final arc.
+      */}
       <circle
         cx="55"
         cy="55"
@@ -434,7 +448,15 @@ function ProgressRing({ percent }: { percent: number }) {
         stroke={tokens.good}
         strokeWidth="10"
         strokeLinecap="round"
-        strokeDasharray={`${filled} ${circumference}`}
+        strokeDasharray={circumference}
+        strokeDashoffset={circumference - filled}
+        className="draw-on"
+        style={
+          {
+            "--draw-from": `${circumference}px`,
+            "--draw-to": `${circumference - filled}px`,
+          } as CSSProperties
+        }
         transform="rotate(-90 55 55)"
       />
       <text x="55" y="60" textAnchor="middle" className="tabular" fontSize="18" fill={tokens.squish700}>

@@ -36,7 +36,9 @@ export function Layout() {
   const stuck = useStuckHeader();
 
   return (
-    <div className="brand-ground min-h-screen">
+    <div className="brand-ground relative min-h-screen">
+      <BackgroundBlobs />
+
       {/*
         A sentinel rather than a scroll listener: the header only needs to know
         whether the page has left the top, and an observer answers that without
@@ -115,6 +117,31 @@ export function Layout() {
         <SquishiMark size={22} className="shrink-0 opacity-40" />
         <NotAMedicalDevice />
       </footer>
+    </div>
+  );
+}
+
+/**
+ * Three soft shapes drifting behind the app.
+ *
+ * The complaint that started this revamp was that the site felt static. Most
+ * of the answer is elsewhere, in transitions and reveals, but a page of
+ * charts sitting on a flat colour reads as dead even when its contents move.
+ *
+ * They are fixed, behind everything, at low opacity, and at three unsynced
+ * periods so the arrangement never repeats in a way the eye can lock onto.
+ * Nothing here carries information, so it is hidden from assistive technology
+ * and stops entirely under reduced motion with the rest of the CSS animation.
+ */
+function BackgroundBlobs() {
+  return (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none fixed inset-0 -z-10 overflow-hidden"
+    >
+      <span className="drift absolute -left-24 top-16 block h-72 w-72 rounded-full bg-squish-300/25 blur-3xl" />
+      <span className="drift-slow absolute -right-20 top-1/3 block h-96 w-96 rounded-full bg-squish-100/40 blur-3xl" />
+      <span className="drift absolute bottom-0 left-1/3 block h-80 w-80 rounded-full bg-squish-500/10 blur-3xl [animation-delay:-8s]" />
     </div>
   );
 }

@@ -38,7 +38,7 @@ import { chartText } from "../../lib/chartText";
 import { tokens } from "../../lib/tokens";
 import { liveConnection } from "../../lib/ws";
 import { useLiveStore } from "../../store/live";
-import { Button, Card, SectionHeader } from "../../components/ui";
+import { Button, Card, Reveal, SectionHeader } from "../../components/ui";
 
 export function HardwareTab() {
   return (
@@ -56,13 +56,15 @@ export function HardwareTab() {
 
       <SignalPreview />
 
-      <section>
-        <SectionHeader
-          title="What connects to what"
-          note="The physical chain, from the muscle through to the app."
-        />
-        <PipelineDiagram nodes={WIRING_CHAIN} />
-      </section>
+      <Reveal>
+        <section>
+          <SectionHeader
+            title="What connects to what"
+            note="The physical chain, from the muscle through to the app."
+          />
+          <PipelineDiagram nodes={WIRING_CHAIN} />
+        </section>
+      </Reveal>
 
       <section>
         <SectionHeader title="Step by step" />
@@ -105,44 +107,48 @@ export function HardwareTab() {
         </ol>
       </section>
 
-      <section>
-        <SectionHeader
-          title="Where the electrodes go"
-          note="Placement decides signal quality more than anything else in the chain."
-        />
-        <div className="grid gap-4 sm:grid-cols-2">
-          {MUSCLES.map((muscle) => (
-            <Card key={muscle} watermark="sm">
-              <h3 className="text-h3 text-squish-700">
-                {MUSCLE_LABELS[muscle]}
-              </h3>
-              <p className="mt-2 text-body text-ink/80">
-                {MUSCLE_PLACEMENT[muscle]}
-              </p>
-            </Card>
-          ))}
-        </div>
-      </section>
+      <Reveal>
+        <section>
+          <SectionHeader
+            title="Where the electrodes go"
+            note="Placement decides signal quality more than anything else in the chain."
+          />
+          <div className="grid gap-4 sm:grid-cols-2">
+            {MUSCLES.map((muscle) => (
+              <Card key={muscle} watermark="sm">
+                <h3 className="text-h3 text-squish-700">
+                  {MUSCLE_LABELS[muscle]}
+                </h3>
+                <p className="mt-2 text-body text-ink/80">
+                  {MUSCLE_PLACEMENT[muscle]}
+                </p>
+              </Card>
+            ))}
+          </div>
+        </section>
+      </Reveal>
 
-      <section>
-        <SectionHeader title="If something looks wrong" />
-        {/* Four rows never justified a table, and its header row was one of
-            the smallest things on the page. Symptom is the card title and
-            cause is its body, so the columns are the card itself. */}
-        <div className="grid gap-4 sm:grid-cols-2">
-          {FAILURES.map((failure) => (
-            <Card key={failure.symptom} className="flex gap-4">
-              <span className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-card bg-alert/10 text-alert">
-                <Glyph id={failure.glyph} size={24} />
-              </span>
-              <div>
-                <h3 className="text-h3 text-squish-700">{failure.symptom}</h3>
-                <p className="mt-1.5 text-body text-ink/80">{failure.cause}</p>
-              </div>
-            </Card>
-          ))}
-        </div>
-      </section>
+      <Reveal>
+        <section>
+          <SectionHeader title="If something looks wrong" />
+          {/* Four rows never justified a table, and its header row was one of
+              the smallest things on the page. Symptom is the card title and
+              cause is its body, so the columns are the card itself. */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            {FAILURES.map((failure) => (
+              <Card key={failure.symptom} className="flex gap-4">
+                <span className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-card bg-alert/10 text-alert">
+                  <Glyph id={failure.glyph} size={24} />
+                </span>
+                <div>
+                  <h3 className="text-h3 text-squish-700">{failure.symptom}</h3>
+                  <p className="mt-1.5 text-body text-ink/80">{failure.cause}</p>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </section>
+      </Reveal>
     </div>
   );
 }

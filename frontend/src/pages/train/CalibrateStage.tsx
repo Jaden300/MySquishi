@@ -8,19 +8,24 @@
  *
  * The reference is self reported. That framing travels with every estimate
  * the model later produces.
+ *
+ * The explanations that used to sit under each heading as grey paragraphs now
+ * ride on the heading itself, as a title and as screen reader text. Someone
+ * mid contraction is not reading a paragraph, and someone resting needs the
+ * countdown, not a rationale for it.
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 
-import { api } from "../lib/api";
-import { useLiveStore } from "../store/live";
-import { liveConnection } from "../lib/ws";
-import { SquishiMascot } from "../components/SquishiMascot";
-import { KG_ESTIMATE_NOTE } from "../lib/clinical";
-import { NON_GRIP_NOTE, allowsKilograms, muscleLabel } from "../lib/muscle";
+import { api } from "../../lib/api";
+import { useLiveStore } from "../../store/live";
+import { liveConnection } from "../../lib/ws";
+import { SquishiMascot } from "../../components/SquishiMascot";
+import { KG_ESTIMATE_NOTE } from "../../lib/clinical";
+import { NON_GRIP_NOTE, allowsKilograms, muscleLabel } from "../../lib/muscle";
+import { Button } from "../../components/ui";
 
-type Stage = "intro" | "maximum" | "rest" | "reference" | "done";
+type Step = "intro" | "maximum" | "rest" | "reference" | "done";
 
 /** Three maximal efforts, and the highest wins. One trial can be spoiled by a
  *  slipped grip or a moment of hesitation, and three is enough to make that
@@ -33,13 +38,12 @@ const TRIALS = 3;
  *  tiredness rather than strength. See docs/HARDWARE_FINDINGS.md. */
 const REST_SECONDS = 30;
 
-export function CalibratePage() {
-  const navigate = useNavigate();
+export function CalibrateStage({ onDone }: { onDone: () => void }) {
   const mvcPct = useLiveStore((s) => s.mvcPct);
   const status = useLiveStore((s) => s.status);
   const muscle = useLiveStore((s) => s.muscle);
 
-  const [stage, setStage] = useState<Stage>("intro");
+  const [step, setStep] = useState<Step>("intro");
   const [referenceKg, setReferenceKg] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -64,14 +68,14 @@ export function CalibratePage() {
   // every render, which would stop the clock from ever reaching zero.
   const startTrial = useCallback(() => {
     liveConnection.connect({ muscle });
-    setStage("maximum");
+    setStep("maximum");
   }, [muscle]);
 
   // The rest countdown between trials. The timer owns the transition rather
   // than the effect body, so the next trial starts from the tick that reached
   // zero instead of from a render.
   useEffect(() => {
-    if (stage !== "rest") return;
+    if (step !== "rest") return;
 
     const timer = setTimeout(() => {
       setRestRemaining((remaining) => {
@@ -84,31 +88,9 @@ export function CalibratePage() {
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [stage, restRemaining, startTrial]);
+  }, [step, restRemaining, startTrial]);
 
-  function finishTrial() {
-    liveConnection.stop();
-    liveConnection.disconnect();
-
-    const recorded = [...trials, peak];
-    setTrials(recorded);
-
-    if (recorded.length >= TRIALS) {
-      // A non grip muscle has no kilogram anchor to ask for, so it calibrates
-      // straight to percent MVC and skips that step entirely.
-      if (wantsKilograms) {
-        setStage("reference");
-      } else {
-        void save();
-      }
-      return;
-    }
-
-    setRestRemaining(REST_SECONDS);
-    setStage("rest");
-  }
-
-  async function save() {
+  const save = useCallback(async () => {
     setSaving(true);
     setError(null);
 
@@ -133,109 +115,117 @@ export function CalibratePage() {
 
     setSaving(false);
     if (result.ok) {
-      setStage("done");
+      setStep("done");
     } else {
       setError(result.error);
     }
+  }, [muscle, referenceKg, wantsKilograms]);
+
+  function finishTrial() {
+    liveConnection.stop();
+    liveConnection.disconnect();
+
+    const recorded = [...trials, peak];
+    setTrials(recorded);
+
+    if (recorded.length >= TRIALS) {
+      // A non grip muscle has no kilogram anchor to ask for, so it calibrates
+      // straight to percent MVC and skips that step entirely.
+      if (wantsKilograms) {
+        setStep("reference");
+      } else {
+        void save();
+      }
+      return;
+    }
+
+    setRestRemaining(REST_SECONDS);
+    setStep("rest");
   }
 
   return (
-    <div className="mx-auto flex max-w-xl flex-col items-center gap-6 text-center">
-      {/* Squishi tracks the stage: live during a trial, and a fitting still
+    <div className="mx-auto flex max-w-xl flex-col items-center gap-7 text-center">
+      {/* Squishi tracks the step: live during a trial, and a fitting still
           pose the rest of the time. */}
       <SquishiMascot
-        value={stage === "maximum" ? mvcPct : 20}
-        size={150}
+        value={step === "maximum" ? mvcPct : 20}
+        size={170}
         pose={
-          stage === "maximum"
+          step === "maximum"
             ? undefined
-            : stage === "rest"
+            : step === "rest"
               ? "resting"
-              : stage === "done"
+              : step === "done"
                 ? "celebrating"
-                : stage === "reference"
+                : step === "reference"
                   ? "explaining"
                   : "encouraging"
         }
       />
 
-      {stage === "intro" ? (
+      {step === "intro" ? (
         <>
-          <h1 className="text-h1 text-squish-700">Let us find your maximum</h1>
-          <p className="text-body text-ink/70">
-            Everything in MySquishi is measured against your own strongest
-            effort, so we need to see it. Three tries of about five seconds
-            each, with a rest in between, and we keep the best one.
-          </p>
-          <button
-            type="button"
-            onClick={startTrial}
-            className="rounded-card bg-squish-500 px-5 py-2.5 text-mist hover:bg-squish-700"
-          >
+          <Heading
+            title="Let us find your maximum"
+            note="Everything in MySquishi is measured against your own strongest effort, so we need to see it. Three tries of about five seconds each, with a rest in between, and we keep the best one."
+          />
+          <Button size="lg" onClick={startTrial}>
             Start the first try
-          </button>
+          </Button>
         </>
       ) : null}
 
-      {stage === "maximum" ? (
+      {step === "maximum" ? (
         <>
-          <h1 className="text-h1 text-squish-700">Squeeze as hard as you can</h1>
-          <p className="text-body text-ink/60">
-            Try {trials.length + 1} of {TRIALS}. Hold it for about five seconds.
-          </p>
+          <Heading
+            title="Squeeze as hard as you can"
+            note={`Try ${trials.length + 1} of ${TRIALS}. Hold it for about five seconds.`}
+          />
           <p className="tabular text-mega text-squish-700">{peak.toFixed(0)}</p>
-          <p className="text-body text-ink/60">
-            {status === "running" ? "Recording..." : "Connecting..."}
+          <p className="text-label text-ink/70">
+            Try {trials.length + 1} of {TRIALS}
+            {status === "running" ? ", recording" : ", connecting"}
           </p>
-          <button
-            type="button"
-            onClick={finishTrial}
-            className="rounded-card border border-squish-300 px-5 py-2.5 text-squish-700 hover:bg-squish-50"
-          >
+          <Button size="lg" variant="secondary" onClick={finishTrial}>
             That was my maximum
-          </button>
+          </Button>
         </>
       ) : null}
 
-      {stage === "rest" ? (
+      {step === "rest" ? (
         <>
-          <h1 className="text-h1 text-squish-700">Rest</h1>
+          {/*
+            A resting person needs the number and nothing else. The reason a
+            real rest matters is on the heading rather than beneath it.
+          */}
+          <Heading
+            title="Rest"
+            note="Let the muscle recover fully. Without a real rest the next try measures how tired you are rather than how strong you are."
+          />
           <p className="tabular text-mega text-squish-700">{restRemaining}</p>
-          <p className="text-body text-ink/70">
-            Let the muscle recover fully. Without a real rest the next try
-            measures how tired you are rather than how strong you are.
+          <p className="text-label text-ink/70">
+            Best so far {best.toFixed(0)} percent. Try {trials.length + 1} starts
+            on its own.
           </p>
-          <p className="text-body text-ink/60">
-            Best so far: {best.toFixed(0)} percent. Try {trials.length + 1} of{" "}
-            {TRIALS} starts automatically.
-          </p>
-          <button
-            type="button"
-            onClick={startTrial}
-            className="rounded-card border border-squish-300 px-5 py-2.5 text-squish-700 hover:bg-squish-50"
-          >
+          <Button variant="secondary" onClick={startTrial}>
             Skip the rest and go now
-          </button>
+          </Button>
         </>
       ) : null}
 
-      {stage === "reference" ? (
+      {step === "reference" ? (
         <>
-          <h1 className="text-h1 text-squish-700">
-            Roughly how much can you grip?
-          </h1>
-          <p className="text-body text-ink/70">
-            If you know your grip strength in kilograms, from a clinic visit or
-            a hand dynamometer, enter it here. It anchors the estimate to a
-            real number. A rough figure is fine.
-          </p>
+          <Heading
+            title="Roughly how much can you grip?"
+            note="If you know your grip strength in kilograms, from a clinic visit or a hand dynamometer, enter it here. It anchors the estimate to a real number. A rough figure is fine."
+          />
 
           <input
             type="number"
             inputMode="decimal"
             value={referenceKg}
             onChange={(e) => setReferenceKg(e.target.value)}
-            className="input tabular max-w-[10rem] text-center"
+            className="input tabular max-w-[12rem] text-center text-stat"
             placeholder="25"
             aria-label="Your grip strength in kilograms"
             title={KG_ESTIMATE_NOTE}
@@ -243,45 +233,57 @@ export function CalibratePage() {
           <span className="sr-only">{KG_ESTIMATE_NOTE}</span>
 
           {error ? (
-            <p role="alert" className="text-label text-alert">
+            <p role="alert" className="text-body text-alert">
               {error}
             </p>
           ) : null}
 
-          <button
-            type="button"
+          <Button
+            size="lg"
             onClick={() => void save()}
             disabled={!referenceKg || saving}
-            className="rounded-card bg-squish-500 px-5 py-2.5 text-mist hover:bg-squish-700 disabled:opacity-50"
           >
             {saving ? "Saving..." : "Finish calibration"}
-          </button>
+          </Button>
         </>
       ) : null}
 
-      {stage === "done" ? (
+      {step === "done" ? (
         <>
-          <h1 className="text-h1 text-squish-700">You are set up</h1>
-          <p className="text-body text-ink/70">
-            {wantsKilograms
-              ? "Your readings will now be shown as a percentage of your own maximum, and estimated in kilograms."
-              : `Your ${muscleLabel(muscle).toLowerCase()} readings will now be shown as a percentage of your own maximum.`}
+          <Heading
+            title="You are set up"
+            note={
+              wantsKilograms
+                ? "Your readings will now be shown as a percentage of your own maximum, and estimated in kilograms."
+                : `Your ${muscleLabel(muscle).toLowerCase()} readings will now be shown as a percentage of your own maximum. ${NON_GRIP_NOTE}`
+            }
+          />
+          <p className="tabular text-mega text-squish-700">
+            {best.toFixed(0)}
           </p>
-          <p className="text-body text-ink/60">
-            Best of {TRIALS} tries: {best.toFixed(0)} percent.
+          <p className="text-label text-ink/70">
+            Best of {TRIALS} tries, percent of your maximum
           </p>
-          {!wantsKilograms ? (
-            <span className="sr-only">{NON_GRIP_NOTE}</span>
-          ) : null}
-          <button
-            type="button"
-            onClick={() => navigate("/train?stage=live")}
-            className="rounded-card bg-squish-500 px-5 py-2.5 text-mist hover:bg-squish-700"
-          >
+          <Button size="lg" onClick={onDone}>
             Start your first session
-          </button>
+          </Button>
         </>
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * A stage heading with its explanation attached rather than printed.
+ *
+ * Local to this file because the note here is genuinely per step rather than
+ * per section, so SectionHeader would be the wrong shape.
+ */
+function Heading({ title, note }: { title: string; note: string }) {
+  return (
+    <div title={note}>
+      <h1 className="text-h1 text-squish-700">{title}</h1>
+      <span className="sr-only">{note}</span>
     </div>
   );
 }

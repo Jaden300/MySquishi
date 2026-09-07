@@ -1,12 +1,16 @@
 /**
- * Onboarding: profile, injury context, goal, and consent.
+ * Profile, injury context, goal, and consent.
+ *
+ * The first stage of the training flow. It used to be its own route, which
+ * meant the navigation bar offered you the setup form as a destination even
+ * after you had filled it in.
  */
 
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 
-import { api } from "../lib/api";
-import { SquishiMascot } from "../components/SquishiMascot";
+import { api } from "../../lib/api";
+import { SquishiMascot } from "../../components/SquishiMascot";
+import { Button, Card, Field } from "../../components/ui";
 
 const AGE_BANDS = ["18-34", "35-49", "50-64", "65-79", "80+"];
 const INJURY_TYPES = [
@@ -18,9 +22,7 @@ const INJURY_TYPES = [
   "other",
 ];
 
-export function OnboardingPage() {
-  const navigate = useNavigate();
-
+export function ProfileStage({ onDone }: { onDone: () => void }) {
   const [displayName, setDisplayName] = useState("");
   const [ageBand, setAgeBand] = useState(AGE_BANDS[2]);
   const [sex, setSex] = useState("female");
@@ -48,22 +50,20 @@ export function OnboardingPage() {
 
     setSaving(false);
     if (result.ok) {
-      navigate("/train?stage=calibrate");
+      onDone();
     } else {
       setError(result.error);
     }
   }
 
   return (
-    <div className="mx-auto flex max-w-xl flex-col gap-6">
+    <div className="mx-auto flex max-w-xl flex-col gap-8">
       <header className="flex items-center gap-4">
-        <SquishiMascot value={12} size={72} pose="waving" />
-        <div>
-          <h1 className="text-h1 text-squish-700">Let us set things up</h1>
-        </div>
+        <SquishiMascot value={12} size={96} pose="waving" />
+        <h1 className="text-h1 text-squish-700">Let us set things up</h1>
       </header>
 
-      <form onSubmit={submit} className="flex flex-col gap-5">
+      <form onSubmit={submit} className="flex flex-col gap-6">
         <Field label="What should we call you?">
           <input
             value={displayName}
@@ -73,9 +73,13 @@ export function OnboardingPage() {
           />
         </Field>
 
-        <div className="grid gap-5 sm:grid-cols-2">
+        <div className="grid gap-6 sm:grid-cols-2">
           <Field label="Age band">
-            <select value={ageBand} onChange={(e) => setAgeBand(e.target.value)} className="input">
+            <select
+              value={ageBand}
+              onChange={(e) => setAgeBand(e.target.value)}
+              className="input"
+            >
               {AGE_BANDS.map((band) => (
                 <option key={band} value={band}>
                   {band}
@@ -85,7 +89,11 @@ export function OnboardingPage() {
           </Field>
 
           <Field label="Sex">
-            <select value={sex} onChange={(e) => setSex(e.target.value)} className="input">
+            <select
+              value={sex}
+              onChange={(e) => setSex(e.target.value)}
+              className="input"
+            >
               <option value="female">Female</option>
               <option value="male">Male</option>
             </select>
@@ -109,7 +117,7 @@ export function OnboardingPage() {
           </select>
         </Field>
 
-        <div className="grid gap-5 sm:grid-cols-2">
+        <div className="grid gap-6 sm:grid-cols-2">
           <Field
             label="Your other hand, in kg"
             hint="If you know it. Recovering to your own other hand is the honest target."
@@ -136,55 +144,30 @@ export function OnboardingPage() {
           </Field>
         </div>
 
-        <label className="flex items-start gap-3 rounded-card border border-squish-100 bg-mist p-4 text-label">
+        <Card as="label" tone="accent" className="flex items-start gap-3">
           <input
             type="checkbox"
             checked={consent}
             onChange={(e) => setConsent(e.target.checked)}
-            className="mt-0.5"
+            className="mt-1.5 h-5 w-5 shrink-0 accent-[var(--squish-500)]"
             required
           />
-          <span className="text-ink/80">
+          <span className="text-body text-ink">
             I understand that MySquishi is a training aid, not a medical
             device, and that it does not replace a clinician.
           </span>
-        </label>
+        </Card>
 
         {error ? (
-          <p role="alert" className="text-label text-alert">
+          <p role="alert" className="text-body text-alert">
             {error}
           </p>
         ) : null}
 
-        <button
-          type="submit"
-          disabled={!consent || saving}
-          className="rounded-card bg-squish-500 px-5 py-2.5 text-mist hover:bg-squish-700 disabled:opacity-50"
-        >
+        <Button type="submit" size="lg" disabled={!consent || saving}>
           {saving ? "Saving..." : "Continue to calibration"}
-        </button>
+        </Button>
       </form>
-
     </div>
-  );
-}
-
-function Field({
-  label,
-  hint,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  children: React.ReactNode;
-}) {
-  // Hints ride on the label as a tooltip rather than printing beneath the
-  // field, which keeps the form free of standing explanatory text.
-  return (
-    <label className="flex flex-col gap-1.5" title={hint}>
-      <span className="text-label text-ink">{label}</span>
-      {children}
-      {hint ? <span className="sr-only">{hint}</span> : null}
-    </label>
   );
 }

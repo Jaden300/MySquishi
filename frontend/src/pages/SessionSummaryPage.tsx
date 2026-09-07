@@ -7,7 +7,7 @@
  */
 
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 
 import {
   Bar,
@@ -34,12 +34,27 @@ import { chartText } from "../lib/chartText";
 import { tokens } from "../lib/tokens";
 import { ChartFrame } from "../components/charts/ChartFrame";
 import { SourceChip, SyntheticBadge } from "../components/Honesty";
+import { Button, Card, PageHeader, StatTile } from "../components/ui";
 import { FATIGUE_BANDWIDTH_NOTE, muscleLabel } from "../lib/muscle";
 import type { Rep } from "../types/api";
 
-export function SessionSummaryPage() {
+interface SessionSummaryPageProps {
+  /**
+   * Set when the summary is rendered inline as the last stage of the training
+   * flow. Left off, it reads the id from the route, which is how a historical
+   * session opened from the session log arrives.
+   */
+  sessionId?: number;
+  /** The celebration only belongs on a session you have just finished. */
+  justFinished?: boolean;
+}
+
+export function SessionSummaryPage({
+  sessionId: given,
+  justFinished = false,
+}: SessionSummaryPageProps = {}) {
   const { id } = useParams();
-  const sessionId = Number(id);
+  const sessionId = given ?? Number(id);
   const detail = useApi(() => api.getSession(sessionId), [sessionId]);
 
   const session = detail.data?.session;
@@ -48,28 +63,35 @@ export function SessionSummaryPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-h1 text-squish-700">Session summary</h1>
-          {session ? (
-            <p className="text-label text-ink/60">
-              {new Date(session.started_at).toLocaleString()}
-              {" - "}
-              {muscleLabel(session.muscle)}
-            </p>
-          ) : null}
-        </div>
-        <div className="flex items-center gap-2">
-          {session?.is_synthetic ? <SyntheticBadge /> : null}
-          {session ? <SourceChip isLive={session.is_live} /> : null}
-        </div>
-      </header>
+      <PageHeader
+        title={justFinished ? "Nice work" : "Session summary"}
+        kicker={
+          session
+            ? `${new Date(session.started_at).toLocaleString()} - ${muscleLabel(session.muscle)}`
+            : undefined
+        }
+        pose={justFinished ? "celebrating" : undefined}
+        poseLabel={justFinished ? "Squishi is celebrating" : undefined}
+        action={
+          <>
+            {session?.is_synthetic ? <SyntheticBadge /> : null}
+            {session ? <SourceChip isLive={session.is_live} /> : null}
+          </>
+        }
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Repetitions" value={session?.rep_count} />
-        <Stat label="Peak effort" value={session?.peak_mvc} unit="%" />
-        <Stat label="Average quality" value={session?.mean_rep_quality} />
-        <Stat label="Signal quality" value={session?.sqi_mean} />
+        <StatTile label="Repetitions" value={session?.rep_count ?? null} />
+        <StatTile
+          label="Peak effort"
+          value={session?.peak_mvc ?? null}
+          unit="%"
+        />
+        <StatTile
+          label="Average quality"
+          value={session?.mean_rep_quality ?? null}
+        />
+        <StatTile label="Signal quality" value={session?.sqi_mean ?? null} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -188,9 +210,11 @@ export function SessionSummaryPage() {
 
       {session ? <AfterSession sessionId={session.id} /> : null}
 
-      <Link to="/progress" className="text-label text-squish-700 underline underline-offset-4">
-        See your progress over time
-      </Link>
+      <div>
+        <Button to="/progress" variant="secondary">
+          See your progress over time
+        </Button>
+      </div>
     </div>
   );
 }
@@ -215,44 +239,21 @@ function profile(session: { mean_mvc: number | null; mean_rep_quality: number | 
   ];
 }
 
-function Stat({
-  label,
-  value,
-  unit = "",
-}: {
-  label: string;
-  value: number | null | undefined;
-  unit?: string;
-}) {
-  // A stat tile still needs to say what it counts, so the label is kept: it
-  // names the number rather than explaining it, which is the distinction
-  // between a caption and a heading.
-  return (
-    <div className="brand-watermark brand-watermark-sm rounded-card border border-squish-100 bg-mist p-4">
-      <p className="text-label text-ink/70">{label}</p>
-      <p className="tabular text-stat text-squish-700">
-        {value == null ? "-" : value.toFixed(value % 1 === 0 ? 0 : 1)}
-        {unit}
-      </p>
-    </div>
-  );
-}
-
 /** Borg and QuickDASH, collected after the session. */
 function AfterSession({ sessionId }: { sessionId: number }) {
   const [borg, setBorg] = useState<number | null>(null);
   const [saved, setSaved] = useState(false);
 
   return (
-    <section className="brand-watermark rounded-panel border border-squish-100 bg-mist p-5">
+    <Card watermark>
       <h2
-        className="text-label font-medium text-squish-700"
+        className="text-h3 text-squish-700"
         title="Rate your effort from 0 to 10. Comparing this against what was measured is itself informative."
       >
         How did that feel?
       </h2>
 
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="mt-4 flex flex-wrap gap-2">
         {Array.from({ length: 11 }, (_, i) => (
           <button
             key={i}
@@ -263,7 +264,7 @@ function AfterSession({ sessionId }: { sessionId: number }) {
               setSaved(true);
             }}
             aria-pressed={borg === i}
-            className={`h-9 w-9 rounded-card border text-label ${
+            className={`tabular h-12 w-12 rounded-card border text-label transition-transform active:scale-[0.94] ${
               borg === i
                 ? "border-squish-500 bg-squish-500 text-mist"
                 : "border-squish-100 text-ink hover:bg-squish-50"
@@ -281,6 +282,6 @@ function AfterSession({ sessionId }: { sessionId: number }) {
           Saved.
         </p>
       ) : null}
-    </section>
+    </Card>
   );
 }

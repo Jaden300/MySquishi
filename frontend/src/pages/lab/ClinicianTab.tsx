@@ -6,15 +6,17 @@
  */
 
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { Line, LineChart, ResponsiveContainer, YAxis } from "recharts";
 
-import { api } from "../lib/api";
-import { useApi } from "../lib/useApi";
-import { tokens } from "../lib/tokens";
-import { ChartFrame } from "../components/charts/ChartFrame";
-import { ClinicalTooltip, SyntheticBadge } from "../components/Honesty";
-import { allowsKilograms, muscleLabel } from "../lib/muscle";
-import type { SessionSummary } from "../types/api";
+import { api } from "../../lib/api";
+import { useApi } from "../../lib/useApi";
+import { tokens } from "../../lib/tokens";
+import { ChartFrame } from "../../components/charts/ChartFrame";
+import { ClinicalTooltip, SyntheticBadge } from "../../components/Honesty";
+import { Button } from "../../components/ui";
+import { allowsKilograms, muscleLabel } from "../../lib/muscle";
+import type { SessionSummary } from "../../types/api";
 
 const PATIENT = "demo";
 
@@ -29,7 +31,7 @@ const METRICS: Array<{ key: keyof SessionSummary; label: string; term?: string }
   { key: "sqi_mean", label: "Signal quality", term: "SQI" },
 ];
 
-export function ClinicianPage() {
+export function ClinicianTab() {
   const sessions = useApi(() => api.listSessions(PATIENT), []);
   const [sortKey, setSortKey] = useState<SortKey>("started_at");
   const [completedOnly, setCompletedOnly] = useState(true);
@@ -51,13 +53,6 @@ export function ClinicianPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-h1 text-squish-700">Clinician view</h1>
-        </div>
-        {rows.some((r) => r.is_synthetic) ? <SyntheticBadge /> : null}
-      </header>
-
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {METRICS.map((metric) => (
           <Sparkline
@@ -90,12 +85,12 @@ export function ClinicianPage() {
               />
               Completed only
             </label>
-            <a
+            <Button
+              variant="secondary"
               href={`/api/export/sessions.csv?patient_id=${PATIENT}`}
-              className="rounded-card border border-squish-300 px-2.5 py-1 text-squish-700"
             >
               Export CSV
-            </a>
+            </Button>
           </div>
         }
       >
@@ -118,31 +113,45 @@ export function ClinicianPage() {
             <tbody>
               {rows.map((session) => (
                 <tr key={session.id} className="border-b border-squish-50">
-                  <td className="tabular py-2 text-ink/80">
-                    {new Date(session.started_at).toLocaleDateString()}
+                  {/* The date opens the session, which is the row's natural
+                      target: a clinician scanning the log for an outlier
+                      wants the repetitions behind it. */}
+                  <td className="tabular py-2.5">
+                    <Link
+                      to={`/progress/session/${session.id}`}
+                      className="text-squish-700 underline underline-offset-4"
+                    >
+                      {new Date(session.started_at).toLocaleDateString()}
+                    </Link>
                   </td>
-                  <td className="py-2 text-ink/80">
-                    {muscleLabel(session.muscle)}
+                  <td className="py-2.5 text-ink/80">
+                    <span className="flex items-center gap-2">
+                      {muscleLabel(session.muscle)}
+                      {/* Badged per row rather than once for the page, since
+                          a log can mix seeded demo sessions with real ones and
+                          a single page level badge cannot say which is which. */}
+                      {session.is_synthetic ? <SyntheticBadge /> : null}
+                    </span>
                   </td>
                   {/* Kilograms are validated on hand dynamometry, so a non
                       grip session has no figure here rather than a converted
                       one. See lib/muscle.ts. */}
-                  <td className="tabular py-2 text-ink/80">
+                  <td className="tabular py-2.5 text-ink/80">
                     {allowsKilograms(session.muscle)
                       ? (session.strength_kg?.toFixed(1) ?? "-")
                       : "-"}
                   </td>
-                  <td className="tabular py-2 text-ink/80">
+                  <td className="tabular py-2.5 text-ink/80">
                     {session.mean_mvc?.toFixed(0) ?? "-"}
                   </td>
-                  <td className="tabular py-2 text-ink/80">
+                  <td className="tabular py-2.5 text-ink/80">
                     {session.rep_count ?? "-"}
                   </td>
-                  <td className="tabular py-2 text-ink/80">
+                  <td className="tabular py-2.5 text-ink/80">
                     {session.sqi_mean?.toFixed(0) ?? "-"}
                   </td>
-                  <td className="tabular py-2 text-ink/80">{session.borg ?? "-"}</td>
-                  <td className="py-2 text-ink/80">
+                  <td className="tabular py-2.5 text-ink/80">{session.borg ?? "-"}</td>
+                  <td className="py-2.5 text-ink/80">
                     {session.rep_count == null ? "Missed" : "Completed"}
                   </td>
                 </tr>

@@ -10,9 +10,9 @@ import { useSearchParams } from "react-router-dom";
 
 import { ErrorBoundary } from "../components/Layout";
 import { PageHeader, TabPanel, Tabs, type TabDef } from "../components/ui";
-import { ClinicianPage } from "./ClinicianPage";
-import { ConnectPage } from "./ConnectPage";
-import { SettingsPage } from "./SettingsPage";
+import { ClinicianTab } from "./lab/ClinicianTab";
+import { HardwareTab } from "./lab/HardwareTab";
+import { SettingsTab } from "./lab/SettingsTab";
 
 type LabTab = "clinician" | "hardware" | "settings";
 
@@ -48,9 +48,9 @@ export function LabPage() {
           the other two working rather than blanking the route. */}
       <TabPanel name="lab" id={tab}>
         <ErrorBoundary key={tab}>
-          {tab === "clinician" ? <ClinicianPage /> : null}
-          {tab === "hardware" ? <ConnectPage /> : null}
-          {tab === "settings" ? <SettingsPage /> : null}
+          {tab === "clinician" ? <ClinicianTab /> : null}
+          {tab === "hardware" ? <HardwareTab /> : null}
+          {tab === "settings" ? <SettingsTab /> : null}
         </ErrorBoundary>
       </TabPanel>
     </>

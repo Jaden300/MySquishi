@@ -40,7 +40,7 @@ export function SessionPage() {
 
   useEffect(() => {
     if (summary?.session_id) {
-      navigate(`/session/${summary.session_id}/summary`);
+      navigate(`/progress/session/${summary.session_id}`);
     }
   }, [summary, navigate]);
 

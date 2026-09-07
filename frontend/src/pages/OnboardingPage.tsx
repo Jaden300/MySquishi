@@ -48,7 +48,7 @@ export function OnboardingPage() {
 
     setSaving(false);
     if (result.ok) {
-      navigate("/calibrate");
+      navigate("/train?stage=calibrate");
     } else {
       setError(result.error);
     }

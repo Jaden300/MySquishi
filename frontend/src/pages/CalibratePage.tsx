@@ -275,7 +275,7 @@ export function CalibratePage() {
           ) : null}
           <button
             type="button"
-            onClick={() => navigate("/session")}
+            onClick={() => navigate("/train?stage=live")}
             className="rounded-card bg-squish-500 px-5 py-2.5 text-mist hover:bg-squish-700"
           >
             Start your first session

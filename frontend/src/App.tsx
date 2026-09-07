@@ -1,21 +1,34 @@
 /**
  * The route table.
+ *
+ * Four destinations. The app used to have eleven, which is more places than it
+ * has tasks: onboarding, calibration and a session are one flow, and the
+ * clinician view, the hardware guide and the settings are one workbench.
+ *
+ * Every old path still resolves. The redirects are three lines each and a dead
+ * link during a demo is worse than a route nobody types any more.
  */
 
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import {
+  createBrowserRouter,
+  Navigate,
+  RouterProvider,
+  useParams,
+} from "react-router-dom";
 
 import { Layout, RouteError } from "./components/Layout";
-import { AboutPage } from "./pages/AboutPage";
-import { ConnectPage } from "./pages/ConnectPage";
-import { CalibratePage } from "./pages/CalibratePage";
-import { ClinicianPage } from "./pages/ClinicianPage";
-import { InsightsPage } from "./pages/InsightsPage";
-import { LandingPage } from "./pages/LandingPage";
-import { OnboardingPage } from "./pages/OnboardingPage";
+import { HomePage } from "./pages/HomePage";
+import { LabPage } from "./pages/LabPage";
+import { NotFoundPage } from "./pages/NotFoundPage";
 import { ProgressPage } from "./pages/ProgressPage";
-import { SessionPage } from "./pages/SessionPage";
 import { SessionSummaryPage } from "./pages/SessionSummaryPage";
-import { SettingsPage } from "./pages/SettingsPage";
+import { TrainPage } from "./pages/TrainPage";
+
+/** Navigate cannot interpolate a route param, so this carries the id across. */
+function LegacySessionSummaryRedirect() {
+  const { id } = useParams();
+  return <Navigate to={`/progress/session/${id}`} replace />;
+}
 
 const router = createBrowserRouter([
   {
@@ -23,17 +36,24 @@ const router = createBrowserRouter([
     element: <Layout />,
     errorElement: <RouteError />,
     children: [
-      { index: true, element: <LandingPage /> },
-      { path: "onboarding", element: <OnboardingPage /> },
-      { path: "calibrate", element: <CalibratePage /> },
-      { path: "session", element: <SessionPage /> },
-      { path: "session/:id/summary", element: <SessionSummaryPage /> },
+      { index: true, element: <HomePage /> },
+      { path: "train", element: <TrainPage /> },
       { path: "progress", element: <ProgressPage /> },
-      { path: "insights", element: <InsightsPage /> },
-      { path: "clinician", element: <ClinicianPage /> },
-      { path: "connect", element: <ConnectPage /> },
-      { path: "settings", element: <SettingsPage /> },
-      { path: "about", element: <AboutPage /> },
+      { path: "progress/session/:id", element: <SessionSummaryPage /> },
+      { path: "lab", element: <LabPage /> },
+
+      // The eleven route era, preserved.
+      { path: "onboarding", element: <Navigate to="/train?stage=profile" replace /> },
+      { path: "calibrate", element: <Navigate to="/train?stage=calibrate" replace /> },
+      { path: "session", element: <Navigate to="/train?stage=live" replace /> },
+      { path: "session/:id/summary", element: <LegacySessionSummaryRedirect /> },
+      { path: "insights", element: <Navigate to="/progress?tab=insights" replace /> },
+      { path: "clinician", element: <Navigate to="/lab?tab=clinician" replace /> },
+      { path: "connect", element: <Navigate to="/lab?tab=hardware" replace /> },
+      { path: "settings", element: <Navigate to="/lab?tab=settings" replace /> },
+      { path: "about", element: <Navigate to="/" replace /> },
+
+      { path: "*", element: <NotFoundPage /> },
     ],
   },
 ]);

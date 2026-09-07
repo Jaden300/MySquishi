@@ -202,7 +202,7 @@ export function ConnectPage() {
           You do not need any of this to use MySquishi. Every part of the app
           works on the built in simulator, including the full session flow and
           all the analytics.{" "}
-          <Link to="/session" className="text-squish-700 underline">
+          <Link to="/train?stage=live" className="text-squish-700 underline">
             Start a simulated session
           </Link>{" "}
           if you would rather not set up hardware.

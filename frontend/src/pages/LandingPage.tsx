@@ -29,13 +29,13 @@ export function LandingPage() {
 
       <div className="flex flex-wrap justify-center gap-3">
         <Link
-          to="/onboarding"
+          to="/train?stage=profile"
           className="rounded-card bg-squish-500 px-5 py-2.5 text-mist hover:bg-squish-700"
         >
           Get started
         </Link>
         <Link
-          to="/session"
+          to="/train?stage=live"
           className="rounded-card border border-squish-300 px-5 py-2.5 text-squish-700 hover:bg-squish-50"
         >
           Try a session

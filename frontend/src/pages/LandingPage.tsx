@@ -19,7 +19,7 @@ export function LandingPage() {
       <SquishiMascot value={preview} size={200} />
 
       <div className="flex flex-col gap-3">
-        <h1 className="text-3xl text-squish-700">Grip strength, made visible</h1>
+        <h1 className="text-h1 text-squish-700">Grip strength, made visible</h1>
         <p className="text-ink/70">
           MySquishi turns the electrical activity of your forearm into
           something you can see, so you can tell whether today went well

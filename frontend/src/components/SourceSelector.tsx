@@ -30,7 +30,7 @@ export function SourceSelector({
 
   return (
     <div className="flex flex-col gap-2">
-      <label htmlFor="source-select" className="text-sm text-ink/80">
+      <label htmlFor="source-select" className="text-label text-ink/80">
         Signal source
       </label>
 
@@ -41,7 +41,7 @@ export function SourceSelector({
           disabled={disabled || sources.loading}
           title={selected?.note}
           onChange={(event) => onChange(event.target.value)}
-          className="flex-1 rounded-xl border border-squish-100 bg-mist px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-squish-500 disabled:opacity-60"
+          className="flex-1 rounded-xl border border-squish-100 bg-mist px-3 py-2 text-label text-ink focus:outline-none focus:ring-2 focus:ring-squish-500 disabled:opacity-60"
         >
           {(sources.data ?? []).map((source) => (
             <option key={source.id} value={source.id} disabled={!source.available}>
@@ -55,7 +55,7 @@ export function SourceSelector({
       </div>
 
       {sources.error ? (
-        <p role="alert" className="text-sm text-ink">
+        <p role="alert" className="text-label text-ink">
           Could not load the source list. Simulation still works.
         </p>
       ) : null}

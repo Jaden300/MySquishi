@@ -20,6 +20,7 @@ import {
 
 import { api } from "../lib/api";
 import { useApi } from "../lib/useApi";
+import { chartText } from "../lib/chartText";
 import { tokens } from "../lib/tokens";
 import { PERCENTILE_NOTE } from "../lib/clinical";
 import { ChartFrame } from "../components/charts/ChartFrame";
@@ -60,7 +61,7 @@ export function ProgressPage() {
   return (
     <div className="flex flex-col gap-6">
       <header>
-        <h1 className="text-xl text-squish-700">Progress</h1>
+        <h1 className="text-h1 text-squish-700">Progress</h1>
       </header>
 
       <StrengthTrendChart
@@ -215,10 +216,10 @@ function GoalCard({
       <div className="flex h-full items-center gap-6">
         <ProgressRing percent={pct} />
         <div className="flex flex-col gap-1">
-          <span className="tabular text-3xl text-squish-700">
+          <span className="tabular text-h1 text-squish-700">
             {goal?.current_kg?.toFixed(1) ?? "-"} kg
           </span>
-          <span className="text-sm text-ink/60">
+          <span className="text-label text-ink/60">
             of {goal?.target_kg?.toFixed(1) ?? "-"} kg goal
           </span>
         </div>
@@ -281,23 +282,48 @@ function AdherenceHeatmap({
       height={200}
     >
       <div className="flex h-full flex-col justify-center">
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-2">
           {ordered.map((session) => {
             const completed = session.rep_count != null;
+            const date = new Date(session.started_at).toLocaleDateString();
             return (
               <span
                 key={session.id}
-                title={`${new Date(session.started_at).toLocaleDateString()}: ${
-                  completed ? "completed" : "missed"
-                }`}
-                className="flex h-6 w-6 items-center justify-center rounded text-[10px]"
+                title={`${date}: ${completed ? "completed" : "missed"}`}
+                className="flex h-9 w-9 items-center justify-center rounded-card"
                 style={{
                   backgroundColor: completed ? tokens.good : tokens.squish100,
-                  color: completed ? tokens.mist : tokens.ink,
                 }}
               >
-                {/* A shape as well as a colour. */}
-                {completed ? "✓" : "·"}
+                {/*
+                  The tick is drawn rather than set as a character. It used to
+                  be a ten pixel glyph, which is below the type floor and was
+                  illegible at the cell size anyway. A shape scales with the
+                  cell and carries the state without relying on colour.
+                */}
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 16 16"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  {completed ? (
+                    <path
+                      d="M3.5 8.5 L6.5 11.5 L12.5 4.5"
+                      fill="none"
+                      stroke={tokens.mist}
+                      strokeWidth="2.4"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  ) : (
+                    <circle cx="8" cy="8" r="2" fill={tokens.ink} opacity="0.35" />
+                  )}
+                </svg>
+                <span className="sr-only">
+                  {date}: {completed ? "completed" : "missed"}
+                </span>
               </span>
             );
           })}
@@ -346,8 +372,8 @@ function CumulativeWork({
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 4, left: 4 }}>
           <CartesianGrid stroke={tokens.squish100} vertical={false} />
-          <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke={tokens.ink} />
-          <YAxis tick={{ fontSize: 11 }} stroke={tokens.ink} />
+          <XAxis dataKey="label" tick={chartText.tick} stroke={tokens.ink} />
+          <YAxis tick={chartText.tick} stroke={tokens.ink} />
           <Tooltip />
           <Area
             type="monotone"
@@ -397,7 +423,7 @@ function PerceivedVsActual({
             dataKey="effort"
             name="Measured"
             unit="%"
-            tick={{ fontSize: 11 }}
+            tick={chartText.tick}
             stroke={tokens.ink}
           />
           <YAxis
@@ -405,7 +431,7 @@ function PerceivedVsActual({
             dataKey="borg"
             name="Reported"
             domain={[0, 10]}
-            tick={{ fontSize: 11 }}
+            tick={chartText.tick}
             stroke={tokens.ink}
           />
           <Tooltip cursor={{ strokeDasharray: "3 3" }} />
@@ -463,7 +489,7 @@ function ModelCard({
           />
         ) : null}
         {prediction?.explanation?.summary ? (
-          <p className="text-sm text-ink/70">{prediction.explanation.summary}</p>
+          <p className="text-body text-ink/70">{prediction.explanation.summary}</p>
         ) : null}
         {synthetic ? <SyntheticBadge /> : null}
       </div>

@@ -20,11 +20,11 @@ export function SettingsPage() {
   return (
     <div className="flex flex-col gap-6">
       <header>
-        <h1 className="text-xl text-squish-700">Settings</h1>
+        <h1 className="text-h1 text-squish-700">Settings</h1>
       </header>
 
       <section className="brand-watermark rounded-panel border border-squish-100 bg-mist p-5">
-        <h2 className="text-sm font-medium text-squish-700">Signal source</h2>
+        <h2 className="text-label font-medium text-squish-700">Signal source</h2>
 
         <ul className="mt-4 flex flex-col gap-3">
           {(sources.data ?? []).map((source) => (
@@ -37,13 +37,13 @@ export function SettingsPage() {
               }`}
             >
               <div className="flex items-center gap-2" title={source.note}>
-                <span className="text-sm text-ink">{source.label}</span>
+                <span className="text-label text-ink">{source.label}</span>
                 <SourceChip isLive={source.is_live} />
               </div>
               <button
                 type="button"
                 disabled={!source.available}
-                className="rounded-card border border-squish-300 px-3 py-1 text-sm text-squish-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-card border border-squish-300 px-3 py-1 text-label text-squish-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {source.available ? "Use" : "Not available"}
               </button>
@@ -56,7 +56,7 @@ export function SettingsPage() {
             </li>
           ) : null}
           {sources.error ? (
-            <li role="alert" className="text-sm text-ink">
+            <li role="alert" className="text-label text-ink">
               {sources.error}
             </li>
           ) : null}
@@ -64,8 +64,8 @@ export function SettingsPage() {
       </section>
 
       <section className="brand-watermark rounded-panel border border-squish-100 bg-mist p-5">
-        <h2 className="text-sm font-medium text-squish-700">Diagnostics</h2>
-        <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+        <h2 className="text-label font-medium text-squish-700">Diagnostics</h2>
+        <dl className="mt-3 grid gap-2 text-label sm:grid-cols-2">
           <Row label="Backend" value={health.data ? "Connected" : health.error ?? "Checking"} />
           <Row label="Sample rate" value={health.data ? `${health.data.sample_rate} Hz` : "-"} />
           <Row
@@ -84,12 +84,12 @@ export function SettingsPage() {
       </section>
 
       <section className="brand-watermark rounded-panel border border-squish-100 bg-mist p-5">
-        <h2 className="text-sm font-medium text-squish-700">Your data</h2>
+        <h2 className="text-label font-medium text-squish-700">Your data</h2>
 
         <div className="mt-4 flex flex-wrap gap-3">
           <a
             href={`/api/export/sessions.csv?patient_id=${PATIENT}`}
-            className="rounded-card border border-squish-300 px-4 py-2 text-sm text-squish-700 hover:bg-squish-50"
+            className="rounded-card border border-squish-300 px-4 py-2 text-label text-squish-700 hover:bg-squish-50"
           >
             Export sessions as CSV
           </a>
@@ -102,14 +102,14 @@ export function SettingsPage() {
               await api.deletePatientData(PATIENT);
               setDeleted(true);
             }}
-            className="rounded-card border border-alert px-4 py-2 text-sm text-alert hover:bg-alert/10"
+            className="rounded-card border border-alert px-4 py-2 text-label text-alert hover:bg-alert/10"
           >
             Delete all my data
           </button>
         </div>
 
         {deleted ? (
-          <p className="mt-2 text-sm text-ink">
+          <p className="mt-2 text-label text-ink">
             Your data has been deleted. Reload to start again.
           </p>
         ) : null}

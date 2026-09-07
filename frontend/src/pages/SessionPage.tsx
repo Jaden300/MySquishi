@@ -50,11 +50,11 @@ export function SessionPage() {
     <div className="flex flex-col gap-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl text-squish-700">Session</h1>
+          <h1 className="text-h1 text-squish-700">Session</h1>
         </div>
         <div className="flex items-center gap-3">
           <SourceChip isLive={isLive} />
-          <span className="tabular text-sm text-ink/60">
+          <span className="tabular text-label text-ink/60">
             {elapsed.toFixed(0)} s
           </span>
         </div>
@@ -62,7 +62,7 @@ export function SessionPage() {
 
       {error ? (
         <div role="alert" className="rounded-panel border border-alert bg-mist p-4">
-          <p className="text-sm text-ink">{error}</p>
+          <p className="text-label text-ink">{error}</p>
         </div>
       ) : null}
 
@@ -109,7 +109,7 @@ export function SessionPage() {
         {/* Only the synthetic generator has a noise dial to turn. On a real
             sensor the quality badge reacts to the electrodes themselves. */}
         {source === "simulated" ? (
-          <label className="ml-auto flex items-center gap-2 text-sm text-ink/70">
+          <label className="ml-auto flex items-center gap-2 text-label text-ink/70">
             <span className="sr-only">Signal noise</span>
             <input
               type="range"
@@ -130,7 +130,7 @@ export function SessionPage() {
           <SquishiMascot />
           <CoachPrompt />
           <SignalQualityBadge />
-          <p className="tabular text-sm text-ink/60">
+          <p className="tabular text-label text-ink/60">
             {reps.length} {reps.length === 1 ? "repetition" : "repetitions"}
           </p>
         </div>

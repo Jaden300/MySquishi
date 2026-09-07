@@ -161,8 +161,8 @@ export function CalibratePage() {
 
       {stage === "intro" ? (
         <>
-          <h1 className="text-xl text-squish-700">Let us find your maximum</h1>
-          <p className="text-sm text-ink/70">
+          <h1 className="text-h1 text-squish-700">Let us find your maximum</h1>
+          <p className="text-body text-ink/70">
             Everything in MySquishi is measured against your own strongest
             effort, so we need to see it. Three tries of about five seconds
             each, with a rest in between, and we keep the best one.
@@ -179,12 +179,12 @@ export function CalibratePage() {
 
       {stage === "maximum" ? (
         <>
-          <h1 className="text-xl text-squish-700">Squeeze as hard as you can</h1>
-          <p className="text-sm text-ink/60">
+          <h1 className="text-h1 text-squish-700">Squeeze as hard as you can</h1>
+          <p className="text-body text-ink/60">
             Try {trials.length + 1} of {TRIALS}. Hold it for about five seconds.
           </p>
-          <p className="tabular text-4xl text-squish-700">{peak.toFixed(0)}</p>
-          <p className="text-sm text-ink/60">
+          <p className="tabular text-mega text-squish-700">{peak.toFixed(0)}</p>
+          <p className="text-body text-ink/60">
             {status === "running" ? "Recording..." : "Connecting..."}
           </p>
           <button
@@ -199,13 +199,13 @@ export function CalibratePage() {
 
       {stage === "rest" ? (
         <>
-          <h1 className="text-xl text-squish-700">Rest</h1>
-          <p className="tabular text-4xl text-squish-700">{restRemaining}</p>
-          <p className="text-sm text-ink/70">
+          <h1 className="text-h1 text-squish-700">Rest</h1>
+          <p className="tabular text-mega text-squish-700">{restRemaining}</p>
+          <p className="text-body text-ink/70">
             Let the muscle recover fully. Without a real rest the next try
             measures how tired you are rather than how strong you are.
           </p>
-          <p className="text-sm text-ink/60">
+          <p className="text-body text-ink/60">
             Best so far: {best.toFixed(0)} percent. Try {trials.length + 1} of{" "}
             {TRIALS} starts automatically.
           </p>
@@ -221,10 +221,10 @@ export function CalibratePage() {
 
       {stage === "reference" ? (
         <>
-          <h1 className="text-xl text-squish-700">
+          <h1 className="text-h1 text-squish-700">
             Roughly how much can you grip?
           </h1>
-          <p className="text-sm text-ink/70">
+          <p className="text-body text-ink/70">
             If you know your grip strength in kilograms, from a clinic visit or
             a hand dynamometer, enter it here. It anchors the estimate to a
             real number. A rough figure is fine.
@@ -243,7 +243,7 @@ export function CalibratePage() {
           <span className="sr-only">{KG_ESTIMATE_NOTE}</span>
 
           {error ? (
-            <p role="alert" className="text-sm text-alert">
+            <p role="alert" className="text-label text-alert">
               {error}
             </p>
           ) : null}
@@ -261,13 +261,13 @@ export function CalibratePage() {
 
       {stage === "done" ? (
         <>
-          <h1 className="text-xl text-squish-700">You are set up</h1>
-          <p className="text-sm text-ink/70">
+          <h1 className="text-h1 text-squish-700">You are set up</h1>
+          <p className="text-body text-ink/70">
             {wantsKilograms
               ? "Your readings will now be shown as a percentage of your own maximum, and estimated in kilograms."
               : `Your ${muscleLabel(muscle).toLowerCase()} readings will now be shown as a percentage of your own maximum.`}
           </p>
-          <p className="text-sm text-ink/60">
+          <p className="text-body text-ink/60">
             Best of {TRIALS} tries: {best.toFixed(0)} percent.
           </p>
           {!wantsKilograms ? (

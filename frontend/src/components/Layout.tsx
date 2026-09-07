@@ -27,7 +27,7 @@ export function Layout() {
           <Link to="/" className="shrink-0">
             <Wordmark size={20} />
           </Link>
-          <nav className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+          <nav className="flex flex-wrap gap-x-4 gap-y-1 text-label">
             {NAV.map((item) => (
               <NavLink
                 key={item.to}
@@ -63,13 +63,13 @@ export function RouteError() {
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-16 text-center">
-      <h1 className="text-xl text-squish-700">Something went wrong here</h1>
-      <p className="mt-2 text-sm text-ink/70">
+      <h1 className="text-h1 text-squish-700">Something went wrong here</h1>
+      <p className="mt-2 text-label text-ink/70">
         {error?.message ?? error?.statusText ?? "This page could not be shown."}
       </p>
       <Link
         to="/"
-        className="mt-6 inline-block rounded-card border border-squish-300 px-4 py-2 text-sm text-squish-700 hover:bg-squish-50"
+        className="mt-6 inline-block rounded-card border border-squish-300 px-4 py-2 text-label text-squish-700 hover:bg-squish-50"
       >
         Back to the start
       </Link>
@@ -96,7 +96,7 @@ export class ErrorBoundary extends Component<
     if (this.state.error) {
       return (
         <div role="alert" className="rounded-panel border border-alert bg-mist p-6">
-          <p className="text-sm text-ink">
+          <p className="text-label text-ink">
             This section could not be shown. The rest of the page still works.
           </p>
         </div>

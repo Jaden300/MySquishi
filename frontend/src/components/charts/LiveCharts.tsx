@@ -22,6 +22,7 @@ import {
 } from "recharts";
 
 import { useLiveStore } from "../../store/live";
+import { chartText } from "../../lib/chartText";
 import { tokens } from "../../lib/tokens";
 import {
   EFFORT_CEILING_PCT,
@@ -104,11 +105,11 @@ export function EffortGauge() {
       }
     >
       <div className="flex h-full flex-col justify-center gap-3">
-        <div className="flex items-baseline gap-2">
-          <span className="tabular text-5xl text-squish-700">
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <span className="tabular text-mega leading-none text-squish-700">
             {mvcPct.toFixed(0)}
           </span>
-          <span className="text-sm text-ink/60">
+          <span className="text-label text-ink/70">
             of target {target.toFixed(0)}
           </span>
         </div>
@@ -135,7 +136,7 @@ export function EffortGauge() {
         </div>
 
         {/* State is never conveyed by colour alone. */}
-        <p className="text-xs text-ink/60">
+        <p className="text-label text-ink/70">
           {onTarget ? "On target" : mvcPct < target ? "Below target" : "Above target"}
           {" - "}
           {effortLevelLabel(mvcPct).toLowerCase()} effort
@@ -166,8 +167,8 @@ export function RepTimeline() {
     >
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 4, right: 4, bottom: 4, left: 4 }}>
-          <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke={tokens.ink} />
-          <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} stroke={tokens.ink} />
+          <XAxis dataKey="name" tick={chartText.tick} stroke={tokens.ink} />
+          <YAxis domain={[0, 100]} tick={chartText.tick} stroke={tokens.ink} />
           <Tooltip
             formatter={(value) => [`${Number(value).toFixed(0)} of 100`, "Quality"]}
           />
@@ -199,15 +200,17 @@ export function SignalQualityBadge() {
   const colour = sqi >= 80 ? tokens.good : sqi >= 60 ? tokens.squish500 : tokens.alert;
 
   return (
-    <div className="flex items-center gap-3 rounded-card border border-squish-100 bg-mist px-4 py-3">
-      <div className="flex flex-col">
-        <span className="text-xs text-ink/60">
+    <div className="flex items-center justify-between gap-3 rounded-card border border-squish-100 bg-mist px-4 py-3">
+      <div className="flex flex-col gap-0.5">
+        <span className="text-label text-ink/70">
           <ClinicalTooltip term="SQI">Signal quality</ClinicalTooltip>
         </span>
-        <span className="tabular text-lg text-squish-700">{sqi.toFixed(0)}</span>
+        <span className="tabular text-stat text-squish-700">
+          {sqi.toFixed(0)}
+        </span>
       </div>
       <span
-        className="rounded-full px-2 py-0.5 text-xs"
+        className="rounded-pill px-3 py-1 text-label"
         style={{ backgroundColor: `${colour}22`, color: tokens.ink }}
         title={sqi < 60 ? "Check the electrodes are firmly attached." : undefined}
       >
@@ -224,9 +227,9 @@ export function CoachPrompt() {
 
   return (
     <div className="rounded-card border border-squish-100 bg-squish-50 px-4 py-3">
-      <p className="text-lg text-squish-700">{coach.prompt}</p>
+      <p className="text-lead text-squish-700">{coach.prompt}</p>
       {coach.seconds_remaining > 0 ? (
-        <p className="tabular text-sm text-ink/60">
+        <p className="tabular text-label text-ink/70">
           {coach.seconds_remaining.toFixed(1)} s
         </p>
       ) : null}

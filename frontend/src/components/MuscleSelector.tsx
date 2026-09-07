@@ -30,7 +30,7 @@ export function MuscleSelector({ disabled = false }: MuscleSelectorProps) {
     <div className="flex flex-col gap-2">
       <label
         htmlFor="muscle-select"
-        className="text-sm text-ink/80"
+        className="text-label text-ink/80"
       >
         Muscle
       </label>
@@ -52,7 +52,7 @@ export function MuscleSelector({ disabled = false }: MuscleSelectorProps) {
         onChange={(event) =>
           setMuscle(event.target.value as (typeof MUSCLES)[number])
         }
-        className="rounded-xl border border-squish-100 bg-mist px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-squish-500 disabled:opacity-60"
+        className="rounded-xl border border-squish-100 bg-mist px-3 py-2 text-label text-ink focus:outline-none focus:ring-2 focus:ring-squish-500 disabled:opacity-60"
       >
         {MUSCLES.map((option) => (
           <option key={option} value={option}>

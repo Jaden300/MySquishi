@@ -27,7 +27,7 @@ export function InsightsPage() {
   return (
     <div className="flex flex-col gap-6">
       <header>
-        <h1 className="text-xl text-squish-700">Insights</h1>
+        <h1 className="text-h1 text-squish-700">Insights</h1>
       </header>
 
       {insights.loading || prescription.loading ? (
@@ -40,7 +40,7 @@ export function InsightsPage() {
       {cards.length === 0 && !insights.loading ? (
         <div className="brand-watermark flex flex-col items-center gap-3 rounded-panel border border-squish-100 bg-mist p-10 text-center">
           <SquishiMascot value={8} size={110} pose="presenting" />
-          <p className="text-sm text-ink/70">
+          <p className="text-body text-ink/70">
             Complete a few sessions and insights will start appearing here.
           </p>
         </div>
@@ -99,7 +99,7 @@ function InsightCard({ prediction }: { prediction: Prediction }) {
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="mt-4 text-sm text-squish-700 underline underline-offset-4"
+        className="mt-4 text-label text-squish-700 underline underline-offset-4"
       >
         Why am I seeing this?
       </button>
@@ -126,7 +126,7 @@ function WhyThis({
   }`;
 
   return (
-    <div className="mt-3 rounded-card bg-squish-50 p-4 text-sm" title={method}>
+    <div className="mt-3 rounded-card bg-squish-50 p-4 text-body" title={method}>
       {explanation.factors.length > 0 ? (
         <ul className="flex flex-col gap-1.5">
           {explanation.factors.map((factor) => (

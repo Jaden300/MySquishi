@@ -53,7 +53,7 @@ export function ClinicianPage() {
     <div className="flex flex-col gap-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl text-squish-700">Clinician view</h1>
+          <h1 className="text-h1 text-squish-700">Clinician view</h1>
         </div>
         {rows.some((r) => r.is_synthetic) ? <SyntheticBadge /> : null}
       </header>
@@ -81,7 +81,7 @@ export function ClinicianPage() {
         emptyMessage="No sessions recorded yet."
         height={420}
         action={
-          <div className="flex items-center gap-3 text-xs">
+          <div className="flex items-center gap-3 text-label">
             <label className="flex items-center gap-1.5 text-ink/70">
               <input
                 type="checkbox"
@@ -100,9 +100,9 @@ export function ClinicianPage() {
         }
       >
         <div className="h-full overflow-auto">
-          <table className="w-full min-w-[46rem] text-left text-sm">
+          <table className="w-full min-w-[46rem] text-left text-label">
             <thead className="sticky top-0 bg-mist">
-              <tr className="border-b border-squish-100 text-xs text-ink/60">
+              <tr className="border-b border-squish-100 text-label text-ink/60">
                 <SortHeader label="Date" k="started_at" sortKey={sortKey} onSort={setSortKey} />
                 <th className="py-2">Muscle</th>
                 <SortHeader label="Grip (kg)" k="strength_kg" sortKey={sortKey} onSort={setSortKey} />
@@ -208,7 +208,7 @@ function Sparkline({
       emptyMessage="No data yet."
       height={90}
       action={
-        <span className="tabular text-sm text-squish-700">
+        <span className="tabular text-label text-squish-700">
           {latest == null ? "-" : latest.toFixed(1)}
         </span>
       }

@@ -21,6 +21,7 @@ import {
   YAxis,
 } from "recharts";
 
+import { chartText } from "../../lib/chartText";
 import { tokens } from "../../lib/tokens";
 import { KG_ESTIMATE_NOTE, MCID_KG } from "../../lib/clinical";
 import { ChartFrame } from "./ChartFrame";
@@ -83,16 +84,21 @@ export function StrengthTrendChart({
             outside the plot area and would otherwise be clipped. */}
         <ComposedChart data={data} margin={{ top: 8, right: 52, bottom: 4, left: 4 }}>
           <CartesianGrid stroke={tokens.squish100} vertical={false} />
-          <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke={tokens.ink} />
+          <XAxis dataKey="label" tick={chartText.tick} stroke={tokens.ink} />
           <YAxis
-            tick={{ fontSize: 11 }}
+            tick={chartText.tick}
             stroke={tokens.ink}
-            label={{ value: "kg", angle: -90, position: "insideLeft", fontSize: 11 }}
+            label={{
+              value: "kg",
+              angle: -90,
+              position: "insideLeft",
+              ...chartText.label,
+            }}
           />
           <Tooltip
             formatter={(value, name) => [`${Number(value).toFixed(1)} kg`, name]}
           />
-          <Legend wrapperStyle={{ fontSize: 11 }} />
+          <Legend wrapperStyle={chartText.legend} />
 
           {/* The 80 percent band. Drawn first so the lines sit on top. */}
           <Area
@@ -137,7 +143,7 @@ export function StrengthTrendChart({
               y={goalKg}
               stroke={tokens.good}
               strokeDasharray="4 4"
-              label={{ value: "Goal", fontSize: 11, position: "right" }}
+              label={{ value: "Goal", ...chartText.label, position: "right" }}
             />
           ) : null}
 
@@ -147,7 +153,7 @@ export function StrengthTrendChart({
               y={baselineKg + MCID_KG}
               stroke={tokens.squish300}
               strokeDasharray="2 4"
-              label={{ value: "MCID", fontSize: 11, position: "right" }}
+              label={{ value: "MCID", ...chartText.label, position: "right" }}
             />
           ) : null}
 
@@ -155,7 +161,7 @@ export function StrengthTrendChart({
             <ReferenceLine
               x={data[plateauFrom].label}
               stroke={tokens.alert}
-              label={{ value: "Plateau", fontSize: 11, position: "top" }}
+              label={{ value: "Plateau", ...chartText.label, position: "top" }}
             />
           ) : null}
 
@@ -174,7 +180,7 @@ export function StrengthTrendChart({
               stroke={tokens.mist}
               label={{
                 value: point.anomaly === "positive" ? "Standout" : "Off pattern",
-                fontSize: 10,
+                ...chartText.label,
                 position: "top",
               }}
             />

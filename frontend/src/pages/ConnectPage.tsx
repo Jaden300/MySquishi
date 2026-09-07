@@ -25,6 +25,7 @@ import {
 import { ChartFrame } from "../components/charts/ChartFrame";
 import { SourceChip } from "../components/Honesty";
 import { MUSCLES, MUSCLE_LABELS, MUSCLE_PLACEMENT } from "../lib/muscle";
+import { chartText } from "../lib/chartText";
 import { tokens } from "../lib/tokens";
 import { liveConnection } from "../lib/ws";
 import { useLiveStore } from "../store/live";
@@ -145,7 +146,7 @@ function SignalPreview() {
               setPreviewing(true);
             }
           }}
-          className="rounded-card border border-squish-300 px-3 py-1 text-xs text-squish-700 hover:bg-squish-50"
+          className="rounded-card border border-squish-300 px-3 py-1 text-label text-squish-700 hover:bg-squish-50"
         >
           {previewing ? "Stop preview" : "Start preview"}
         </button>
@@ -153,13 +154,13 @@ function SignalPreview() {
     >
       <div className="flex h-full flex-col gap-2">
         {error ? (
-          <p role="alert" className="text-sm text-ink">
+          <p role="alert" className="text-label text-ink">
             {error}
           </p>
         ) : null}
 
         {status === "running" ? (
-          <div className="flex items-center gap-3 text-sm text-ink/70">
+          <div className="flex items-center gap-3 text-label text-ink/70">
             <SourceChip isLive={isLive} />
             <span className="tabular">Signal quality {sqi.toFixed(0)}</span>
           </div>
@@ -170,7 +171,7 @@ function SignalPreview() {
             <LineChart data={data} margin={{ top: 4, right: 4, bottom: 4, left: 4 }}>
               <CartesianGrid stroke={tokens.squish100} vertical={false} />
               <XAxis dataKey="index" hide />
-              <YAxis tick={{ fontSize: 11 }} stroke={tokens.ink} width={40} />
+              <YAxis tick={chartText.tick} stroke={tokens.ink} width={40} />
               <Line
                 type="monotone"
                 dataKey="value"
@@ -191,13 +192,13 @@ export function ConnectPage() {
   return (
     <div className="flex flex-col gap-6">
       <header>
-        <h1 className="text-xl text-squish-700">Connect your sensor</h1>
+        <h1 className="text-h1 text-squish-700">Connect your sensor</h1>
       </header>
 
       {/* Simulation is a first class feature and a selling point, so it is
           stated up front rather than offered as an apology at the bottom. */}
       <div className="rounded-panel border border-squish-100 bg-mist p-4">
-        <p className="text-sm text-ink">
+        <p className="text-body text-ink">
           You do not need any of this to use MySquishi. Every part of the app
           works on the built in simulator, including the full session flow and
           all the analytics.{" "}
@@ -210,10 +211,10 @@ export function ConnectPage() {
 
       {/* Highest risk setting on the board, so it goes first and it is loud. */}
       <div className="rounded-panel border-2 border-alert bg-mist p-4">
-        <h2 className="text-base text-squish-700">
+        <h2 className="text-body text-squish-700">
           Before anything else: set the output selector to RAW
         </h2>
-        <p className="mt-1 text-sm text-ink/80">
+        <p className="mt-1 text-body text-ink/80">
           The MyoWare 2.0 leaves the factory set to ENV, and this app cannot
           read that. The switch is on the sensor board itself. If the trace
           below stays flat no matter how hard you squeeze, this is almost
@@ -224,10 +225,10 @@ export function ConnectPage() {
       <SignalPreview />
 
       <section className="rounded-panel border border-squish-100 bg-mist p-4">
-        <h2 className="text-base text-squish-700">What connects to what</h2>
+        <h2 className="text-body text-squish-700">What connects to what</h2>
         <ol className="mt-3 flex flex-col gap-1">
           {CHAIN.map((item, index) => (
-            <li key={item} className="flex gap-3 text-sm text-ink/80">
+            <li key={item} className="flex gap-3 text-body text-ink/80">
               <span aria-hidden="true" className="text-ink/40">
                 {index === 0 ? " " : "|"}
               </span>
@@ -238,41 +239,41 @@ export function ConnectPage() {
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-base text-squish-700">Step by step</h2>
+        <h2 className="text-body text-squish-700">Step by step</h2>
         <ol className="flex flex-col gap-3">
           {STEPS.map((step, index) => (
             <li
               key={step.title}
               className="rounded-panel border border-squish-100 bg-mist p-4"
             >
-              <h3 className="text-sm text-squish-700">
+              <h3 className="text-label text-squish-700">
                 <span className="tabular text-ink/40">{index + 1}. </span>
                 {step.title}
               </h3>
-              <p className="mt-1 text-sm text-ink/80">{step.body}</p>
+              <p className="mt-1 text-body text-ink/80">{step.body}</p>
             </li>
           ))}
         </ol>
       </section>
 
       <section className="rounded-panel border border-squish-100 bg-mist p-4">
-        <h2 className="text-base text-squish-700">Where the electrodes go</h2>
+        <h2 className="text-body text-squish-700">Where the electrodes go</h2>
         <dl className="mt-3 flex flex-col gap-3">
           {MUSCLES.map((muscle) => (
             <div key={muscle}>
-              <dt className="text-sm text-squish-700">{MUSCLE_LABELS[muscle]}</dt>
-              <dd className="text-sm text-ink/80">{MUSCLE_PLACEMENT[muscle]}</dd>
+              <dt className="text-label text-squish-700">{MUSCLE_LABELS[muscle]}</dt>
+              <dd className="text-body text-ink/80">{MUSCLE_PLACEMENT[muscle]}</dd>
             </div>
           ))}
         </dl>
       </section>
 
       <section className="rounded-panel border border-squish-100 bg-mist p-4">
-        <h2 className="text-base text-squish-700">If something looks wrong</h2>
+        <h2 className="text-body text-squish-700">If something looks wrong</h2>
         <div className="mt-3 overflow-x-auto">
-          <table className="w-full min-w-[32rem] text-left text-sm">
+          <table className="w-full min-w-[32rem] text-left text-label">
             <thead>
-              <tr className="border-b border-squish-100 text-xs text-ink/60">
+              <tr className="border-b border-squish-100 text-label text-ink/60">
                 <th className="py-2">What you see</th>
                 <th className="py-2">What it usually means</th>
               </tr>

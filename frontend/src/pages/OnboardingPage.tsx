@@ -59,7 +59,7 @@ export function OnboardingPage() {
       <header className="flex items-center gap-4">
         <SquishiMascot value={12} size={72} pose="waving" />
         <div>
-          <h1 className="text-xl text-squish-700">Let us set things up</h1>
+          <h1 className="text-h1 text-squish-700">Let us set things up</h1>
         </div>
       </header>
 
@@ -136,7 +136,7 @@ export function OnboardingPage() {
           </Field>
         </div>
 
-        <label className="flex items-start gap-3 rounded-card border border-squish-100 bg-mist p-4 text-sm">
+        <label className="flex items-start gap-3 rounded-card border border-squish-100 bg-mist p-4 text-label">
           <input
             type="checkbox"
             checked={consent}
@@ -151,7 +151,7 @@ export function OnboardingPage() {
         </label>
 
         {error ? (
-          <p role="alert" className="text-sm text-alert">
+          <p role="alert" className="text-label text-alert">
             {error}
           </p>
         ) : null}
@@ -182,7 +182,7 @@ function Field({
   // field, which keeps the form free of standing explanatory text.
   return (
     <label className="flex flex-col gap-1.5" title={hint}>
-      <span className="text-sm text-ink">{label}</span>
+      <span className="text-label text-ink">{label}</span>
       {children}
       {hint ? <span className="sr-only">{hint}</span> : null}
     </label>

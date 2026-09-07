@@ -17,10 +17,10 @@ export function AboutPage() {
   return (
     <div className="flex max-w-3xl flex-col gap-6">
       <header>
-        <h1 className="text-xl text-squish-700">How MySquishi works</h1>
+        <h1 className="text-h1 text-squish-700">How MySquishi works</h1>
       </header>
 
-      <section className="flex flex-col gap-3 text-sm text-ink/80">
+      <section className="flex flex-col gap-3 text-body text-ink/80">
         <p>
           MySquishi reads the electrical activity your forearm muscles produce
           when you grip, filters it, and measures a handful of things about
@@ -41,12 +41,12 @@ export function AboutPage() {
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-medium text-squish-700">
+        <h2 className="text-label font-medium text-squish-700">
           Where the data comes from
         </h2>
         <div className="flex items-start gap-3 rounded-panel border border-squish-100 bg-mist p-4">
           <SyntheticBadge />
-          <p className="text-sm text-ink/80">
+          <p className="text-body text-ink/80">
             The demo account and the reference population are synthetic. They
             were generated to demonstrate the app and do not describe real
             people. Anywhere synthetic data drives something you see, it
@@ -56,7 +56,7 @@ export function AboutPage() {
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-medium text-squish-700">The models</h2>
+        <h2 className="text-label font-medium text-squish-700">The models</h2>
 
         {models.loading ? (
           <div role="status" className="flex items-center gap-2">
@@ -66,16 +66,16 @@ export function AboutPage() {
         ) : null}
 
         {models.error ? (
-          <p role="alert" className="text-sm text-ink">
+          <p role="alert" className="text-label text-ink">
             {models.error}
           </p>
         ) : null}
 
         {models.data?.length ? (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[36rem] text-left text-sm">
+            <table className="w-full min-w-[36rem] text-left text-label">
               <thead>
-                <tr className="border-b border-squish-100 text-xs text-ink/60">
+                <tr className="border-b border-squish-100 text-label text-ink/60">
                   <th className="py-2">Model</th>
                   <th className="py-2">Trained</th>
                   <th className="py-2">Score</th>
@@ -101,7 +101,7 @@ export function AboutPage() {
             </table>
           </div>
         ) : !models.loading && !models.error ? (
-          <p className="text-sm text-ink/70">
+          <p className="text-body text-ink/70">
             No trained models are on disk. The app falls back to transparent
             rule based scoring, and says so wherever that happens.
           </p>
@@ -109,8 +109,8 @@ export function AboutPage() {
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-medium text-squish-700">Limitations</h2>
-        <ul className="flex list-disc flex-col gap-2 pl-5 text-sm text-ink/80">
+        <h2 className="text-label font-medium text-squish-700">Limitations</h2>
+        <ul className="flex list-disc flex-col gap-2 pl-5 text-body text-ink/80">
           <li>
             Surface EMG is sensitive to electrode placement. Moving the
             electrodes changes the readings, which is why calibration belongs

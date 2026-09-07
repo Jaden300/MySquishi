@@ -30,6 +30,7 @@ import {
 
 import { api } from "../lib/api";
 import { useApi } from "../lib/useApi";
+import { chartText } from "../lib/chartText";
 import { tokens } from "../lib/tokens";
 import { ChartFrame } from "../components/charts/ChartFrame";
 import { SourceChip, SyntheticBadge } from "../components/Honesty";
@@ -49,9 +50,9 @@ export function SessionSummaryPage() {
     <div className="flex flex-col gap-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl text-squish-700">Session summary</h1>
+          <h1 className="text-h1 text-squish-700">Session summary</h1>
           {session ? (
-            <p className="text-sm text-ink/60">
+            <p className="text-label text-ink/60">
               {new Date(session.started_at).toLocaleString()}
               {" - "}
               {muscleLabel(session.muscle)}
@@ -85,8 +86,8 @@ export function SessionSummaryPage() {
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={repRows(reps)} margin={{ top: 8, right: 8, bottom: 4, left: 4 }}>
               <CartesianGrid stroke={tokens.squish100} vertical={false} />
-              <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke={tokens.ink} />
-              <YAxis tick={{ fontSize: 11 }} stroke={tokens.ink} />
+              <XAxis dataKey="label" tick={chartText.tick} stroke={tokens.ink} />
+              <YAxis tick={chartText.tick} stroke={tokens.ink} />
               <Tooltip />
               <Bar dataKey="peak" radius={[4, 4, 0, 0]}>
                 {repRows(reps).map((row, i) => (
@@ -118,8 +119,8 @@ export function SessionSummaryPage() {
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={repRows(reps)} margin={{ top: 8, right: 8, bottom: 4, left: 4 }}>
               <CartesianGrid stroke={tokens.squish100} vertical={false} />
-              <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke={tokens.ink} />
-              <YAxis tick={{ fontSize: 11 }} stroke={tokens.ink} unit=" Hz" />
+              <XAxis dataKey="label" tick={chartText.tick} stroke={tokens.ink} />
+              <YAxis tick={chartText.tick} stroke={tokens.ink} unit=" Hz" />
               <Tooltip />
               <Line
                 type="monotone"
@@ -145,8 +146,8 @@ export function SessionSummaryPage() {
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={repRows(reps)} margin={{ top: 8, right: 8, bottom: 4, left: 4 }}>
               <CartesianGrid stroke={tokens.squish100} vertical={false} />
-              <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke={tokens.ink} />
-              <YAxis tick={{ fontSize: 11 }} stroke={tokens.ink} />
+              <XAxis dataKey="label" tick={chartText.tick} stroke={tokens.ink} />
+              <YAxis tick={chartText.tick} stroke={tokens.ink} />
               <Tooltip />
               <ReferenceLine y={0.12} stroke={tokens.good} strokeDasharray="4 4" />
               <Line
@@ -172,8 +173,8 @@ export function SessionSummaryPage() {
           <ResponsiveContainer width="100%" height="100%">
             <RadarChart data={profile(session)}>
               <PolarGrid stroke={tokens.squish100} />
-              <PolarAngleAxis dataKey="metric" tick={{ fontSize: 11 }} />
-              <PolarRadiusAxis domain={[0, 100]} tick={{ fontSize: 10 }} />
+              <PolarAngleAxis dataKey="metric" tick={chartText.tick} />
+              <PolarRadiusAxis domain={[0, 100]} tick={chartText.tick} />
               <Radar
                 dataKey="value"
                 stroke={tokens.squish500}
@@ -187,7 +188,7 @@ export function SessionSummaryPage() {
 
       {session ? <AfterSession sessionId={session.id} /> : null}
 
-      <Link to="/progress" className="text-sm text-squish-700 underline underline-offset-4">
+      <Link to="/progress" className="text-label text-squish-700 underline underline-offset-4">
         See your progress over time
       </Link>
     </div>
@@ -228,8 +229,8 @@ function Stat({
   // between a caption and a heading.
   return (
     <div className="brand-watermark brand-watermark-sm rounded-card border border-squish-100 bg-mist p-4">
-      <p className="text-sm text-ink/70">{label}</p>
-      <p className="tabular text-2xl text-squish-700">
+      <p className="text-label text-ink/70">{label}</p>
+      <p className="tabular text-stat text-squish-700">
         {value == null ? "-" : value.toFixed(value % 1 === 0 ? 0 : 1)}
         {unit}
       </p>
@@ -245,7 +246,7 @@ function AfterSession({ sessionId }: { sessionId: number }) {
   return (
     <section className="brand-watermark rounded-panel border border-squish-100 bg-mist p-5">
       <h2
-        className="text-sm font-medium text-squish-700"
+        className="text-label font-medium text-squish-700"
         title="Rate your effort from 0 to 10. Comparing this against what was measured is itself informative."
       >
         How did that feel?
@@ -262,7 +263,7 @@ function AfterSession({ sessionId }: { sessionId: number }) {
               setSaved(true);
             }}
             aria-pressed={borg === i}
-            className={`h-9 w-9 rounded-card border text-sm ${
+            className={`h-9 w-9 rounded-card border text-label ${
               borg === i
                 ? "border-squish-500 bg-squish-500 text-mist"
                 : "border-squish-100 text-ink hover:bg-squish-50"

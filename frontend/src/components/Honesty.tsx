@@ -19,7 +19,7 @@ import { CLINICAL_TERMS } from "../lib/clinical";
 export function SyntheticBadge({ note }: { note?: string }) {
   return (
     <span
-      className="inline-flex items-center gap-1 rounded-full border border-squish-300 bg-squish-100 px-2 py-0.5 text-xs text-squish-700"
+      className="inline-flex items-center gap-1.5 rounded-pill border border-squish-300 bg-squish-100 px-3 py-1 text-label text-squish-700"
       title={
         note ??
         "This data is synthetic. It was generated for demonstration and does not describe a real person."
@@ -35,7 +35,7 @@ export function SyntheticBadge({ note }: { note?: string }) {
 export function SourceChip({ isLive }: { isLive: boolean }) {
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs ${
+      className={`inline-flex items-center gap-1.5 rounded-pill px-3 py-1 text-label ${
         isLive
           ? "bg-good/15 text-ink border border-good"
           : "bg-squish-100 text-squish-700 border border-squish-300"
@@ -97,10 +97,12 @@ export function IntervalReadout({
   return (
     <div className="flex flex-col gap-0.5" title={summary}>
       <span
-        className={`tabular text-2xl ${degraded ? "text-alert" : "text-squish-700"}`}
+        className={`tabular text-stat ${degraded ? "text-alert" : "text-squish-700"}`}
       >
         {fmt(point)}
-        {suffix ? <span className="text-base text-ink/60">{suffix}</span> : null}
+        {suffix ? (
+          <span className="font-body text-h3 text-ink/50">{suffix}</span>
+        ) : null}
       </span>
       <span className="sr-only">{label ? `${label}. ` : ""}{range}</span>
       {degraded ? <span className="sr-only">{degradedNote}</span> : null}
@@ -153,10 +155,16 @@ export function ClinicalTooltip({
   );
 }
 
-/** The standing disclaimer. Not dismissible. */
+/**
+ * The standing disclaimer. Not dismissible.
+ *
+ * Set at the label size rather than the old twelve pixels. It is required to
+ * be visible, and text nobody can read is not visible: shrinking a disclaimer
+ * until it disappears is the exact move this rule exists to prevent.
+ */
 export function NotAMedicalDevice() {
   return (
-    <p className="text-xs text-ink/60">
+    <p className="text-label text-ink/70">
       MySquishi is a training aid, not a medical device. It does not diagnose
       and it does not replace a clinician.
     </p>

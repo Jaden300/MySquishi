@@ -98,9 +98,18 @@ export function ProgressPage() {
     [band, sex],
   );
 
-  // Oldest first for a trend line.
+  /*
+    Oldest first for a trend line, grip only.
+
+    The backend omits strength_kg entirely rather than nulling it for another
+    muscle, so filtering on the field alone would already be correct. The
+    muscle check is here anyway: a kilogram figure reaching a non grip session
+    is a clinical claim the measurement does not support, and that guarantee
+    should not depend on a reader knowing what a serializer on the other side
+    of the wire does. See docs/CLINICAL.md.
+  */
   const completed = (sessions.data ?? [])
-    .filter((s) => s.strength_kg != null)
+    .filter((s) => s.strength_kg != null && allowsKilograms(s.muscle))
     .slice()
     .reverse();
 
@@ -720,7 +729,7 @@ function PerceivedVsActual({
             stroke={tokens.ink}
           />
           <Tooltip cursor={{ strokeDasharray: "3 3" }} />
-          <Scatter data={data} fill={tokens.squish500} />
+          <Scatter data={data} fill={tokens.squish500} isAnimationActive={false} />
         </ScatterChart>
       </ResponsiveContainer>
     </ChartFrame>

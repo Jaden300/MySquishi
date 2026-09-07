@@ -111,7 +111,7 @@ export function SessionSummaryPage({
               <XAxis dataKey="label" tick={chartText.tick} stroke={tokens.ink} />
               <YAxis tick={chartText.tick} stroke={tokens.ink} />
               <Tooltip />
-              <Bar dataKey="peak" radius={[4, 4, 0, 0]}>
+              <Bar dataKey="peak" radius={[4, 4, 0, 0]} isAnimationActive={false}>
                 {repRows(reps).map((row, i) => (
                   <Cell key={i} fill={row.quality >= 70 ? tokens.good : tokens.squish500} />
                 ))}
@@ -202,6 +202,7 @@ export function SessionSummaryPage({
                 stroke={tokens.squish500}
                 fill={tokens.squish300}
                 fillOpacity={0.4}
+                isAnimationActive={false}
               />
             </RadarChart>
           </ResponsiveContainer>

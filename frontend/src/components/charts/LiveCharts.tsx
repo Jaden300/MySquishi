@@ -172,7 +172,7 @@ export function RepTimeline() {
           <Tooltip
             formatter={(value) => [`${Number(value).toFixed(0)} of 100`, "Quality"]}
           />
-          <Bar dataKey="quality" radius={[4, 4, 0, 0]}>
+          <Bar dataKey="quality" radius={[4, 4, 0, 0]} isAnimationActive={false}>
             {data.map((entry, i) => (
               <Cell
                 key={i}

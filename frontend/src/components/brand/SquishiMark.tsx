@@ -1,10 +1,18 @@
 /**
- * The brand mark: Squishi's face, without arms, in the tighter logo crop.
+ * The brand mark: Squishi's face, without arms.
  *
  * This is the still mark used as furniture around the app. The animated
  * character lives in SquishiMascot, which is the only place effort drives the
  * artwork.
+ *
+ * The silhouette comes from PoseArt rather than from a second copy of the path.
+ * It used to restate the body in its own 620x520 crop, which made the mark and
+ * the mascot subtly different shapes. Nobody noticed while they never appeared
+ * at the same size; the header now sets a 20px wordmark beside 88px poses, so
+ * they do.
  */
+
+import { PoseArt } from "./PoseArt";
 
 interface SquishiMarkProps {
   size?: number;
@@ -17,31 +25,27 @@ interface SquishiMarkProps {
   title?: string;
 }
 
+/*
+  The body occupies x 38..162 and y 53..148 of the pose box, so the mark crops
+  to that with a little air rather than using the full 200x200. Without the
+  crop the mark carries roughly forty percent empty margin and reads far
+  smaller than the size prop implies.
+*/
+const CROP = { x: 32, y: 47, w: 136, h: 107 } as const;
+
 export function SquishiMark({ size = 24, className = "", title }: SquishiMarkProps) {
   return (
     <svg
       width={size}
-      height={(size * 520) / 620}
-      viewBox="0 0 620 520"
+      height={(size * CROP.h) / CROP.w}
+      viewBox={`${CROP.x} ${CROP.y} ${CROP.w} ${CROP.h}`}
       className={className}
       role={title ? "img" : undefined}
       aria-label={title}
       aria-hidden={title ? undefined : true}
       focusable="false"
     >
-      <path
-        d="M310,60 C498,60 598,168 598,286 C598,416 488,488 310,488 C132,488 22,416 22,286 C22,168 122,60 310,60 Z"
-        fill="var(--squishi-body)"
-      />
-      <circle cx="243" cy="272" r="31" fill="var(--squishi-face)" />
-      <circle cx="377" cy="272" r="31" fill="var(--squishi-face)" />
-      <path
-        d="M258,352 Q310,396 362,352"
-        fill="none"
-        stroke="var(--squishi-face)"
-        strokeWidth="23"
-        strokeLinecap="round"
-      />
+      <PoseArt pose="idle" bodyOnly />
     </svg>
   );
 }

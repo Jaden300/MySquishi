@@ -11,6 +11,7 @@ import type { ReactNode } from "react";
 
 import { ClinicalTooltip, SyntheticBadge } from "../Honesty";
 import { SquishiMark } from "../brand/SquishiMark";
+import { Card } from "../ui/Card";
 
 export interface ChartFrameProps {
   title: string;
@@ -53,19 +54,25 @@ export function ChartFrame({
   children,
 }: ChartFrameProps) {
   return (
-    <section className="brand-watermark brand-watermark-sm rounded-panel border border-squish-100 bg-mist p-5">
-      <header className="mb-4 flex items-start justify-between gap-3">
+    <Card watermark="sm">
+      <header className="mb-5 flex items-start justify-between gap-3">
+        {/*
+          The description stays on this wrapper rather than moving up to the
+          Card. It has to sit on the element that holds the heading text, both
+          so the tooltip appears over the title itself and because the frame's
+          test asserts exactly that relationship.
+        */}
         <div className="min-w-0" title={description}>
-          <h3 className="text-sm font-medium text-squish-700">
+          <h3 className="text-h3 text-squish-700">
             {tooltipTerm ? (
               <ClinicalTooltip term={tooltipTerm}>{title}</ClinicalTooltip>
             ) : (
               title
             )}
-            {unit ? (
-              <span className="ml-1 text-xs text-ink/50">({unit})</span>
-            ) : null}
           </h3>
+          {/* The unit is not printed. It rides on the heading tooltip and on
+              the axis label, so the header carries no parenthetical grey. */}
+          {unit ? <span className="sr-only">Measured in {unit}</span> : null}
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {isSynthetic ? <SyntheticBadge /> : null}
@@ -84,7 +91,7 @@ export function ChartFrame({
           {children}
         </ChartBody>
       </div>
-    </section>
+    </Card>
   );
 }
 
@@ -123,12 +130,12 @@ function ChartBody({
         role="alert"
         className="flex h-full flex-col items-center justify-center gap-2 text-center"
       >
-        <p className="text-sm text-ink">{error}</p>
+        <p className="text-body text-ink">{error}</p>
         {onRetry ? (
           <button
             type="button"
             onClick={onRetry}
-            className="rounded-card border border-squish-300 px-3 py-1 text-sm text-squish-700 hover:bg-squish-50"
+            className="rounded-pill border border-squish-300 px-5 py-2 text-label text-squish-700 hover:bg-squish-50"
           >
             Try again
           </button>
@@ -141,8 +148,8 @@ function ChartBody({
     // Empty states invite action rather than reporting absence.
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
-        <SquishiMark size={44} className="opacity-30" />
-        <p className="text-sm text-ink/70">
+        <SquishiMark size={52} className="opacity-30" />
+        <p className="text-body text-ink/70">
           {emptyMessage ?? "Nothing here yet."}
         </p>
       </div>

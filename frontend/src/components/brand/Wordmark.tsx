@@ -16,6 +16,8 @@ interface WordmarkProps {
 
 export function Wordmark({ size = 19, className = "" }: WordmarkProps) {
   const letter = {
+    fontFamily: "var(--font-display)",
+    fontVariationSettings: '"SOFT" 60, "WONK" 1',
     fontSize: size,
     fontWeight: 600,
     lineHeight: 1,
@@ -31,9 +33,12 @@ export function Wordmark({ size = 19, className = "" }: WordmarkProps) {
       <span style={letter} aria-hidden="true">
         My
       </span>
+      {/* The mark now crops tight to the silhouette rather than carrying the
+          old logo box's margin, so it needs less multiplier to read at the
+          same weight beside the lettering. */}
       <SquishiMark
-        size={size * 1.2}
-        className="mx-[2px] mb-[-1px] shrink-0"
+        size={size * 1.12}
+        className="mx-[2px] mb-[-2px] shrink-0"
       />
       <span style={letter} aria-hidden="true">
         quishi

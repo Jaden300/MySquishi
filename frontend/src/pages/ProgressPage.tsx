@@ -1,11 +1,13 @@
 /**
- * The progress dashboard, charts 13 to 21.
+ * Progress: strength over time, consistency, and what the models make of it.
  *
- * Reads the denormalized session summaries plus the longitudinal models.
- * Model backed cards degrade honestly: when a model has not been trained the
- * card says so rather than hiding.
+ * Three tabs on one route, because these were three destinations describing
+ * one thing. Reads the denormalized session summaries plus the longitudinal
+ * models. Model backed cards degrade honestly: when a model has not been
+ * trained the card says so rather than hiding.
  */
 
+import { useSearchParams } from "react-router-dom";
 import {
   Area,
   AreaChart,
@@ -22,27 +24,72 @@ import { api } from "../lib/api";
 import { useApi } from "../lib/useApi";
 import { chartText } from "../lib/chartText";
 import { tokens } from "../lib/tokens";
-import { PERCENTILE_NOTE } from "../lib/clinical";
+import { KG_ESTIMATE_NOTE } from "../lib/clinical";
 import { ChartFrame } from "../components/charts/ChartFrame";
 import {
   StrengthTrendChart,
   type TrendPoint,
 } from "../components/charts/StrengthTrendChart";
-import { IntervalReadout, SyntheticBadge } from "../components/Honesty";
+import { CohortScatter } from "../components/figures/CohortScatter";
+import { PercentileHistogram } from "../components/figures/PercentileHistogram";
+import { SyntheticBadge } from "../components/Honesty";
+import { ErrorBoundary } from "../components/Layout";
+import { PoseSpot } from "../components/brand/PoseSpot";
+import {
+  Card,
+  PageHeader,
+  StatTile,
+  TabPanel,
+  Tabs,
+  type TabDef,
+} from "../components/ui";
 import { NON_GRIP_NOTE, allowsKilograms } from "../lib/muscle";
-import type { SessionSummary } from "../types/api";
+import type { CohortPoint, Prediction, SessionSummary } from "../types/api";
+import { InsightsTab } from "./progress/InsightsTab";
 
 const PATIENT = "demo";
 
+type ProgressTab = "strength" | "consistency" | "insights";
+
+const TABS: TabDef<ProgressTab>[] = [
+  { id: "strength", label: "Strength" },
+  { id: "consistency", label: "Consistency" },
+  { id: "insights", label: "Insights" },
+];
+
 export function ProgressPage() {
+  const [params, setParams] = useSearchParams();
+  const rawTab = params.get("tab");
+  const tab: ProgressTab = TABS.some((t) => t.id === rawTab)
+    ? (rawTab as ProgressTab)
+    : "strength";
+
+  const setTab = (next: ProgressTab) => {
+    const updated = new URLSearchParams(params);
+    updated.set("tab", next);
+    setParams(updated, { replace: true });
+  };
+
   const sessions = useApi(() => api.listSessions(PATIENT), []);
   const goal = useApi(() => api.getGoal(PATIENT), []);
   const forecast = useApi(() => api.forecast(PATIENT), []);
   const plateau = useApi(() => api.plateau(PATIENT), []);
   const anomalies = useApi(() => api.anomalies(PATIENT), []);
-  const percentile = useApi(() => api.percentile(PATIENT), []);
   const perceived = useApi(() => api.perceived(PATIENT), []);
   const archetype = useApi(() => api.archetype(PATIENT), []);
+  const patient = useApi(() => api.getPatient(PATIENT), []);
+
+  // The reference distribution needs the patient's band and sex, so it waits
+  // for the profile rather than guessing a group to compare against.
+  const band = patient.data?.age_band ?? null;
+  const sex = patient.data?.sex ?? null;
+  const cohort = useApi(
+    () =>
+      band && sex
+        ? api.cohortPercentiles(band, sex)
+        : Promise.resolve({ ok: true as const, data: null }),
+    [band, sex],
+  );
 
   // Oldest first for a trend line.
   const completed = (sessions.data ?? [])
@@ -57,76 +104,195 @@ export function ProgressPage() {
   ).length;
 
   const trend = buildTrend(completed, forecast.data, anomalies.data);
+  const done = (sessions.data ?? []).filter((s) => s.rep_count != null);
+  const latestKg = completed.length
+    ? (completed[completed.length - 1].strength_kg ?? null)
+    : null;
+  const bestQuality = done.reduce<number | null>(
+    (best, s) =>
+      s.mean_rep_quality == null
+        ? best
+        : best == null
+          ? s.mean_rep_quality
+          : Math.max(best, s.mean_rep_quality),
+    null,
+  );
+  const plateauAt = plateauIndex(plateau.data, completed.length);
+  const anySynthetic = (sessions.data ?? []).some((s) => s.is_synthetic);
 
   return (
-    <div className="flex flex-col gap-6">
-      <header>
-        <h1 className="text-h1 text-squish-700">Progress</h1>
-      </header>
-
-      <StrengthTrendChart
-        data={trend}
-        goalKg={goal.data?.target_kg ?? null}
-        baselineKg={goal.data?.baseline_kg ?? null}
-        plateauFrom={plateauIndex(plateau.data, completed.length)}
-        loading={sessions.loading}
-        error={sessions.error ?? forecast.error}
-        onRetry={sessions.reload}
-        isSynthetic={completed.some((s) => s.is_synthetic)}
-        description={
-          nonGripCount > 0
-            ? `Measured grip sessions with a projection and its likely range. ${nonGripCount} ${
-                nonGripCount === 1 ? "session on another muscle is" : "sessions on other muscles are"
-              } not shown here: ${NON_GRIP_NOTE}`
-            : "Measured sessions with a projection and its likely range."
+    <div className="flex flex-col gap-8">
+      <PageHeader
+        title="Progress"
+        pose="flexing"
+        note="Your strength over time, how consistently you have trained, and what the models make of it."
+        action={
+          <>
+            {anySynthetic ? <SyntheticBadge /> : null}
+            <Tabs tabs={TABS} value={tab} onChange={setTab} name="progress" />
+          </>
         }
       />
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <GoalCard
-          goal={goal.data}
-          loading={goal.loading}
-          error={goal.error}
-          onRetry={goal.reload}
+      {/*
+        Three numbers, before any chart. The first thing the page says should
+        be where you are, not how to read a trend line.
+      */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <StatTile
+          size="hero"
+          label={latestKg == null ? "Sessions completed" : "Estimated grip"}
+          value={latestKg ?? done.length}
+          unit={latestKg == null ? undefined : "kg"}
+          decimals={latestKg == null ? 0 : 1}
+          note={latestKg == null ? undefined : KG_ESTIMATE_NOTE}
         />
-        <AdherenceHeatmap
-          sessions={sessions.data ?? []}
-          loading={sessions.loading}
-          error={sessions.error}
-          onRetry={sessions.reload}
+        <StatTile
+          size="hero"
+          label="Sessions completed"
+          value={done.length}
         />
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <CumulativeWork
-          sessions={completed}
-          loading={sessions.loading}
-          error={sessions.error}
-          onRetry={sessions.reload}
-        />
-        <PerceivedVsActual
-          sessions={completed}
-          loading={sessions.loading || perceived.loading}
-          error={sessions.error}
-          onRetry={sessions.reload}
+        <StatTile
+          size="hero"
+          label="Best rep quality"
+          value={bestQuality}
+          note="The highest average repetition quality across any one session, out of 100."
         />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <ModelCard
-          title="Recovery archetype"
-          state={archetype}
-          description="Which recovery shape your trajectory most resembles."
-        />
-        <ModelCard
-          title="Population percentile"
-          state={percentile}
-          description={PERCENTILE_NOTE}
-          synthetic
-        />
-      </div>
+      <TabPanel name="progress" id={tab}>
+        <ErrorBoundary key={tab}>
+          {tab === "strength" ? (
+            <div className="flex flex-col gap-6">
+              <StrengthTrendChart
+                data={trend}
+                goalKg={goal.data?.target_kg ?? null}
+                baselineKg={goal.data?.baseline_kg ?? null}
+                plateauFrom={plateauAt}
+                loading={sessions.loading}
+                error={sessions.error ?? forecast.error}
+                onRetry={sessions.reload}
+                isSynthetic={completed.some((s) => s.is_synthetic)}
+                description={
+                  nonGripCount > 0
+                    ? `Measured grip sessions with a projection and its likely range. ${nonGripCount} ${
+                        nonGripCount === 1
+                          ? "session on another muscle is"
+                          : "sessions on other muscles are"
+                      } not shown here: ${NON_GRIP_NOTE}`
+                    : "Measured sessions with a projection and its likely range."
+                }
+              />
+
+              <div className="grid gap-6 lg:grid-cols-2">
+                <GoalCard
+                  goal={goal.data}
+                  loading={goal.loading}
+                  error={goal.error}
+                  onRetry={goal.reload}
+                />
+                <CumulativeWork
+                  sessions={completed}
+                  loading={sessions.loading}
+                  error={sessions.error}
+                  onRetry={sessions.reload}
+                />
+              </div>
+
+              {/*
+                Kilograms, the EWGSOP2 line and a population percentile are
+                validated on hand dynamometry, so the comparison is withheld
+                entirely for another muscle rather than shown as blanks. The
+                backend refuses the data too. See docs/CLINICAL.md.
+              */}
+              {latestKg != null ? (
+                <PercentileHistogram
+                  data={cohort.data}
+                  yourKg={latestKg}
+                  loading={cohort.loading || patient.loading}
+                  error={cohort.error}
+                  onRetry={cohort.reload}
+                />
+              ) : null}
+            </div>
+          ) : null}
+
+          {tab === "consistency" ? (
+            <div className="flex flex-col gap-6">
+              <div className="grid gap-6 lg:grid-cols-2">
+                <AdherenceHeatmap
+                  sessions={sessions.data ?? []}
+                  loading={sessions.loading}
+                  error={sessions.error}
+                  onRetry={sessions.reload}
+                />
+                <PerceivedVsActual
+                  sessions={completed}
+                  loading={sessions.loading || perceived.loading}
+                  error={sessions.error}
+                  onRetry={sessions.reload}
+                />
+              </div>
+
+              <CohortScatter
+                cohort={cohortPoints(archetype.data)}
+                you={archetypeCoordinates(archetype.data)}
+                yourArchetype={archetypeId(archetype.data)}
+                loading={archetype.loading}
+                error={archetype.error}
+                onRetry={archetype.reload}
+              />
+
+              {/* Only drawn when a changepoint was actually detected, so the
+                  slumped pose means something rather than decorating a page. */}
+              {plateauAt != null ? (
+                <Card tone="accent" className="flex items-center gap-5">
+                  <PoseSpot
+                    pose="disappointed"
+                    size={72}
+                    label="Squishi looks concerned"
+                  />
+                  <div>
+                    <h3 className="text-h3 text-squish-700">
+                      Your progress has levelled off
+                    </h3>
+                    <p className="mt-1.5 text-body text-ink/80">
+                      {summaryOf(plateau.data) ??
+                        "A changepoint was detected in your trend."}
+                    </p>
+                  </div>
+                </Card>
+              ) : null}
+            </div>
+          ) : null}
+
+          {tab === "insights" ? <InsightsTab /> : null}
+        </ErrorBoundary>
+      </TabPanel>
     </div>
   );
+}
+
+/** The M12 cohort point list, which the endpoint returns on every request. */
+function cohortPoints(prediction: Prediction | null | undefined): CohortPoint[] {
+  const value = prediction?.value as { cohort?: CohortPoint[] } | undefined;
+  return value?.cohort ?? [];
+}
+
+function archetypeCoordinates(
+  prediction: Prediction | null | undefined,
+): [number, number] | null {
+  const value = prediction?.value as { coordinates?: number[] } | undefined;
+  const point = value?.coordinates;
+  return point && point.length >= 2 ? [point[0], point[1]] : null;
+}
+
+function archetypeId(prediction: Prediction | null | undefined): string | undefined {
+  return (prediction?.value as { archetype?: string } | undefined)?.archetype;
+}
+
+function summaryOf(prediction: Prediction | null | undefined): string | null {
+  return prediction?.explanation?.summary ?? null;
 }
 
 function buildTrend(
@@ -442,79 +608,3 @@ function PerceivedVsActual({
   );
 }
 
-/**
- * A card for a model backed insight.
- *
- * When the endpoint is missing or the model is untrained this says so
- * plainly. A model that has not been trained is a fact about the system, not
- * something to paper over.
- */
-function ModelCard({
-  title,
-  state,
-  description,
-  synthetic = false,
-}: {
-  title: string;
-  state: { data: unknown; loading: boolean; error: string | null; reload: () => void };
-  description?: string;
-  synthetic?: boolean;
-}) {
-  const prediction = state.data as
-    | { value?: unknown; explanation?: { summary?: string }; degraded?: boolean }
-    | null;
-
-  const interval = extractInterval(prediction?.value);
-
-  return (
-    <ChartFrame
-      title={title}
-      description={description}
-      loading={state.loading}
-      error={state.error}
-      onRetry={state.reload}
-      isEmpty={!prediction}
-      emptyMessage="This insight needs more sessions before it can be computed."
-      isSynthetic={synthetic}
-      height={200}
-    >
-      <div className="flex h-full flex-col justify-center gap-3">
-        {interval ? (
-          <IntervalReadout
-            point={interval.point}
-            lower={interval.lower}
-            upper={interval.upper}
-            unit={interval.unit}
-            degraded={prediction?.degraded}
-          />
-        ) : null}
-        {prediction?.explanation?.summary ? (
-          <p className="text-body text-ink/70">{prediction.explanation.summary}</p>
-        ) : null}
-        {synthetic ? <SyntheticBadge /> : null}
-      </div>
-    </ChartFrame>
-  );
-}
-
-function extractInterval(
-  value: unknown,
-): { point: number; lower: number; upper: number; unit: string } | null {
-  if (!value || typeof value !== "object") return null;
-  const candidate = value as Record<string, unknown>;
-
-  if (typeof candidate.point === "number" && typeof candidate.lower === "number") {
-    return {
-      point: candidate.point,
-      lower: candidate.lower,
-      upper: candidate.upper as number,
-      unit: (candidate.unit as string) ?? "",
-    };
-  }
-
-  for (const nested of Object.values(candidate)) {
-    const found = extractInterval(nested);
-    if (found) return found;
-  }
-  return null;
-}

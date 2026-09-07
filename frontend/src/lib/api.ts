@@ -10,6 +10,8 @@
 import { DEFAULT_MUSCLE, type Muscle } from "./muscle";
 import type {
   Calibration,
+  CohortPercentiles,
+  CohortSummary,
   Goal,
   Health,
   ModelRecord,
@@ -127,8 +129,20 @@ export const api = {
   insights: (id: string) => request<Prediction[]>(`/ml/insights/${id}`),
   models: () => request<ModelRecord[]>("/ml/models"),
 
-  // Cohort
-  cohortSummary: () => request<Record<string, unknown>>("/cohort/summary"),
+  // Cohort. Both are synthetic and say so on the wire, so anything drawn from
+  // them carries the badge.
+  cohortSummary: () => request<CohortSummary>("/cohort/summary"),
+  /**
+   * The reference distribution for one age band and sex.
+   *
+   * Returns the histogram already binned, so the chart draws what the model
+   * computed rather than rebinning it in the browser and risking a different
+   * answer to the one the percentile endpoint gives.
+   */
+  cohortPercentiles: (ageBand: string, sex: string) =>
+    request<CohortPercentiles>(
+      `/cohort/percentiles?age_band=${encodeURIComponent(ageBand)}&sex=${encodeURIComponent(sex)}`,
+    ),
 };
 
 export { request };

@@ -272,3 +272,37 @@ export const FRAME_KEYS = [
   "rep_event",
   "coach",
 ] as const;
+
+/**
+ * The synthetic reference cohort.
+ *
+ * Both of these carry is_synthetic on the wire rather than relying on the UI
+ * to remember. See backend/app/api/cohort.py.
+ */
+export interface CohortSummary {
+  version: string;
+  n_patients: number;
+  archetypes: { id: string; label: string; count: number }[];
+  is_synthetic: boolean;
+  note: string;
+}
+
+export interface CohortPercentiles {
+  reference_group: string;
+  n_reference: number;
+  /** True when the requested band was too small and the reference was widened. */
+  pooled: boolean;
+  ewgsop2_threshold: number;
+  curve: { percentile: number; strength_kg: number }[];
+  /** Pre binned by the backend, so the chart never rebins it differently. */
+  histogram: { strength_kg: number; count: number }[];
+  is_synthetic: boolean;
+}
+
+/** One point in the M12 archetype scatter. */
+export interface CohortPoint {
+  patient_id: string;
+  x: number;
+  y: number;
+  archetype: string;
+}

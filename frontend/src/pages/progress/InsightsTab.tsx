@@ -3,19 +3,24 @@
  *
  * docs/ML.md requires that affordance on every insight card, so the drawer
  * lives in the card component rather than being added per insight.
+ *
+ * This was its own route. It is now a tab on Progress, so it carries no page
+ * heading of its own: the card list is the whole of it.
  */
 
 import { useState } from "react";
 
-import { api } from "../lib/api";
-import { useApi } from "../lib/useApi";
-import { IntervalReadout, SyntheticBadge } from "../components/Honesty";
-import { SquishiMascot } from "../components/SquishiMascot";
-import type { Explanation, Prediction } from "../types/api";
+import { api } from "../../lib/api";
+import { useApi } from "../../lib/useApi";
+import { IntervalReadout, SyntheticBadge } from "../../components/Honesty";
+import { SquishiMascot } from "../../components/SquishiMascot";
+import { PoseSpot } from "../../components/brand/PoseSpot";
+import { Card } from "../../components/ui";
+import type { Explanation, Prediction } from "../../types/api";
 
 const PATIENT = "demo";
 
-export function InsightsPage() {
+export function InsightsTab() {
   const insights = useApi(() => api.insights(PATIENT), []);
   const prescription = useApi(() => api.prescription(PATIENT), []);
 
@@ -25,10 +30,12 @@ export function InsightsPage() {
   ];
 
   return (
-    <div className="flex flex-col gap-6">
-      <header>
-        <h1 className="text-h1 text-squish-700">Insights</h1>
-      </header>
+    <div className="flex flex-col gap-5">
+      {/* The tab header carries the pose, so the list below it is only cards. */}
+      <div className="flex items-center gap-4">
+        <PoseSpot pose="springingBack" size={56} />
+        <h2 className="text-h2 text-squish-700">What the models found</h2>
+      </div>
 
       {insights.loading || prescription.loading ? (
         <div role="status" className="flex items-center gap-2">
@@ -38,12 +45,12 @@ export function InsightsPage() {
       ) : null}
 
       {cards.length === 0 && !insights.loading ? (
-        <div className="brand-watermark flex flex-col items-center gap-3 rounded-panel border border-squish-100 bg-mist p-10 text-center">
+        <Card className="brand-watermark flex flex-col items-center gap-3 text-center" pad="lg">
           <SquishiMascot value={8} size={110} pose="presenting" />
-          <p className="text-body text-ink/70">
+          <p className="text-lead text-ink/70">
             Complete a few sessions and insights will start appearing here.
           </p>
-        </div>
+        </Card>
       ) : null}
 
       <div className="grid gap-4">
@@ -60,7 +67,7 @@ function InsightCard({ prediction }: { prediction: Prediction }) {
   const readout = readoutFor(prediction);
 
   return (
-    <article className="brand-watermark brand-watermark-sm rounded-panel border border-squish-100 bg-mist p-5">
+    <Card as="article" watermark="sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div
           className="min-w-0 flex-1"
@@ -70,7 +77,11 @@ function InsightCard({ prediction }: { prediction: Prediction }) {
               : undefined
           }
         >
-          <p className="text-ink">{prediction.explanation.summary}</p>
+          {/*
+            The summary is the card's content, not a caption, so it is the one
+            sentence that stays and it reads at the lead size.
+          */}
+          <p className="text-lead text-ink">{prediction.explanation.summary}</p>
           {prediction.degraded ? (
             <span className="sr-only">
               Produced without a trained model, using transparent rules.
@@ -105,7 +116,7 @@ function InsightCard({ prediction }: { prediction: Prediction }) {
       </button>
 
       {open ? <WhyThis explanation={prediction.explanation} trainedAt={prediction.trained_at} /> : null}
-    </article>
+    </Card>
   );
 }
 
@@ -126,11 +137,19 @@ function WhyThis({
   }`;
 
   return (
-    <div className="mt-3 rounded-card bg-squish-50 p-4 text-body" title={method}>
+    <div className="mt-3 rounded-card bg-squish-50 p-4" title={method}>
+      {/*
+        A stack of bullets read as a wall of small print. The same facts as a
+        row of chips are scannable, and each still carries its direction as a
+        glyph plus a word, so nothing is conveyed by colour alone.
+      */}
       {explanation.factors.length > 0 ? (
-        <ul className="flex flex-col gap-1.5">
+        <ul className="flex flex-wrap gap-2">
           {explanation.factors.map((factor) => (
-            <li key={factor.name} className="flex items-start gap-2 text-ink/80">
+            <li
+              key={factor.name}
+              className="flex items-center gap-2 rounded-pill border border-squish-100 bg-mist px-3 py-1 text-label text-ink/80"
+            >
               <span aria-hidden="true" className="text-squish-500">
                 {factor.direction === "increases"
                   ? "▲"

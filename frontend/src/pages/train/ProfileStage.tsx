@@ -10,7 +10,7 @@ import { useState } from "react";
 
 import { api } from "../../lib/api";
 import { SquishiMascot } from "../../components/SquishiMascot";
-import { Button, Card, Field } from "../../components/ui";
+import { Button, Card, Field, Select } from "../../components/ui";
 
 const AGE_BANDS = ["18-34", "35-49", "50-64", "65-79", "80+"];
 const INJURY_TYPES = [
@@ -74,47 +74,39 @@ export function ProfileStage({ onDone }: { onDone: () => void }) {
         </Field>
 
         <div className="grid gap-6 sm:grid-cols-2">
-          <Field label="Age band">
-            <select
+          <Field label="Age band" htmlFor="profile-age-band">
+            <Select
+              id="profile-age-band"
               value={ageBand}
-              onChange={(e) => setAgeBand(e.target.value)}
-              className="input"
-            >
-              {AGE_BANDS.map((band) => (
-                <option key={band} value={band}>
-                  {band}
-                </option>
-              ))}
-            </select>
+              onChange={setAgeBand}
+              options={AGE_BANDS.map((band) => ({ value: band, label: band }))}
+            />
           </Field>
 
-          <Field label="Sex">
-            <select
+          <Field label="Sex" htmlFor="profile-sex">
+            <Select
+              id="profile-sex"
               value={sex}
-              onChange={(e) => setSex(e.target.value)}
-              className="input"
-            >
-              <option value="female">Female</option>
-              <option value="male">Male</option>
-            </select>
+              onChange={setSex}
+              options={[
+                { value: "female", label: "Female" },
+                { value: "male", label: "Male" },
+              ]}
+            />
           </Field>
         </div>
 
         <Field
           label="What are you recovering from?"
           hint="Used for context only. It does not change how your signal is measured."
+          htmlFor="profile-injury"
         >
-          <select
+          <Select
+            id="profile-injury"
             value={injuryType}
-            onChange={(e) => setInjuryType(e.target.value)}
-            className="input"
-          >
-            {INJURY_TYPES.map((type) => (
-              <option key={type} value={type}>
-                {type}
-              </option>
-            ))}
-          </select>
+            onChange={setInjuryType}
+            options={INJURY_TYPES.map((type) => ({ value: type, label: type }))}
+          />
         </Field>
 
         <div className="grid gap-6 sm:grid-cols-2">

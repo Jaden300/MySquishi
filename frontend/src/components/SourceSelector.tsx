@@ -13,6 +13,7 @@
 import { api } from "../lib/api";
 import { useApi } from "../lib/useApi";
 import { SourceChip } from "./Honesty";
+import { Select } from "./ui/Select";
 
 interface SourceSelectorProps {
   value: string;
@@ -35,21 +36,22 @@ export function SourceSelector({
       </label>
 
       <div className="flex items-center gap-2">
-        <select
+        <Select
           id="source-select"
+          className="flex-1"
           value={value}
           disabled={disabled || sources.loading}
           title={selected?.note}
-          onChange={(event) => onChange(event.target.value)}
-          className="flex-1 rounded-xl border border-squish-100 bg-mist px-3 py-2 text-label text-ink focus:outline-none focus:ring-2 focus:ring-squish-500 disabled:opacity-60"
-        >
-          {(sources.data ?? []).map((source) => (
-            <option key={source.id} value={source.id} disabled={!source.available}>
-              {source.label}
-              {source.available ? "" : " (not available)"}
-            </option>
-          ))}
-        </select>
+          onChange={onChange}
+          placeholder={sources.loading ? "Loading sources" : "Select a source"}
+          options={(sources.data ?? []).map((source) => ({
+            value: source.id,
+            label: source.available
+              ? source.label
+              : `${source.label} (not available)`,
+            disabled: !source.available,
+          }))}
+        />
 
         {selected ? <SourceChip isLive={selected.is_live} /> : null}
       </div>

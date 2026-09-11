@@ -12,7 +12,7 @@
  */
 
 import type { GlyphId } from "../../lib/hardware";
-import { Glyph } from "./Glyph";
+import { GlyphTile } from "./Glyph";
 
 interface Limitation {
   glyph: GlyphId;
@@ -57,9 +57,7 @@ export function LimitationsGrid() {
           title={item.detail}
           className="flex items-start gap-4 rounded-card border border-squish-100 bg-squish-50 p-5"
         >
-          <span className="mt-0.5 shrink-0 text-squish-500">
-            <Glyph id={item.glyph} size={28} />
-          </span>
+          <GlyphTile id={item.glyph} size={26} className="mt-0.5" />
           <div>
             <h3 className="text-h3 text-squish-700">{item.title}</h3>
             {/* The full sentence, unabridged, for anyone who wants it. */}

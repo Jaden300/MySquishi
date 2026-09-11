@@ -15,6 +15,7 @@ import {
   NON_GRIP_NOTE,
   allowsKilograms,
 } from "../lib/muscle";
+import { Select } from "./ui/Select";
 
 interface MuscleSelectorProps {
   /** Disabled mid session: changing muscle would invalidate the calibration
@@ -38,7 +39,7 @@ export function MuscleSelector({ disabled = false }: MuscleSelectorProps) {
       {/* The absence of kilograms is a deliberate clinical decision, so it
           stays attached to the control as a tooltip and as screen reader text
           rather than printing under it. */}
-      <select
+      <Select
         id="muscle-select"
         value={muscle}
         disabled={disabled}
@@ -49,17 +50,12 @@ export function MuscleSelector({ disabled = false }: MuscleSelectorProps) {
               ? undefined
               : NON_GRIP_NOTE
         }
-        onChange={(event) =>
-          setMuscle(event.target.value as (typeof MUSCLES)[number])
-        }
-        className="rounded-xl border border-squish-100 bg-mist px-3 py-2 text-label text-ink focus:outline-none focus:ring-2 focus:ring-squish-500 disabled:opacity-60"
-      >
-        {MUSCLES.map((option) => (
-          <option key={option} value={option}>
-            {MUSCLE_LABELS[option]}
-          </option>
-        ))}
-      </select>
+        onChange={(next) => setMuscle(next as (typeof MUSCLES)[number])}
+        options={MUSCLES.map((option) => ({
+          value: option,
+          label: MUSCLE_LABELS[option],
+        }))}
+      />
 
       {!allowsKilograms(muscle) && (
         <span className="sr-only">{NON_GRIP_NOTE}</span>

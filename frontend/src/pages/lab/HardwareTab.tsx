@@ -30,7 +30,7 @@ import {
 
 import { ChartFrame } from "../../components/charts/ChartFrame";
 import { SourceChip } from "../../components/Honesty";
-import { Glyph } from "../../components/figures/Glyph";
+import { GlyphTile } from "../../components/figures/Glyph";
 import { PipelineDiagram } from "../../components/figures/PipelineDiagram";
 import { MUSCLES, MUSCLE_LABELS, MUSCLE_PLACEMENT } from "../../lib/muscle";
 import { FAILURES, STEPS, WIRING_CHAIN } from "../../lib/hardware";
@@ -78,15 +78,10 @@ export function HardwareTab() {
               >
                 <details open={step.critical}>
                   <summary className="flex cursor-pointer list-none items-center gap-4 px-5 py-4">
-                    <span
-                      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-card ${
-                        step.critical
-                          ? "bg-alert/10 text-alert"
-                          : "bg-squish-50 text-squish-500"
-                      }`}
-                    >
-                      <Glyph id={step.glyph} size={24} />
-                    </span>
+                    <GlyphTile
+                      id={step.glyph}
+                      tone={step.critical ? "alert" : "brand"}
+                    />
                     <span className="flex-1 text-h3 text-squish-700">
                       {step.title}
                     </span>
@@ -137,9 +132,7 @@ export function HardwareTab() {
           <div className="grid gap-4 sm:grid-cols-2">
             {FAILURES.map((failure) => (
               <Card key={failure.symptom} className="flex gap-4">
-                <span className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-card bg-alert/10 text-alert">
-                  <Glyph id={failure.glyph} size={24} />
-                </span>
+                <GlyphTile id={failure.glyph} tone="alert" className="mt-0.5" />
                 <div>
                   <h3 className="text-h3 text-squish-700">{failure.symptom}</h3>
                   <p className="mt-1.5 text-body text-ink/80">{failure.cause}</p>

@@ -79,7 +79,19 @@
   h2,
   h3 {
     font-family: var(--font-display);
-    font-variation-settings: "SOFT" 60, "WONK" 1;
+    /*
+      opsz is pinned rather than left to the font. Fraunces defaults it to 9,
+      the caption grade, which is drawn thin and high contrast for text a few
+      millimetres tall and looks brittle at heading sizes. 48 is the display
+      end of the range: heavier joins, and the swelling terminals SOFT is
+      about actually have somewhere to swell.
+
+      SOFT rounds those terminals, which is the move the mascot's silhouette
+      makes, so the headings and the character read as one drawing. It only
+      arrived when main.tsx started importing the font subset that carries
+      these axes; before that this whole declaration was inert.
+    */
+    font-variation-settings: "opsz" 48, "SOFT" 60, "WONK" 1;
     font-weight: 600;
     letter-spacing: -0.02em;
     line-height: 1.05;
@@ -127,6 +139,15 @@
   }
 
   .input:hover {
+    border-color: var(--squish-300);
+  }
+
+  /* The accessibility floor requires visible focus on every interactive
+     element. This class had a hover state and no focus state at all, so the
+     fields using it were the one place in the app a keyboard went blind. */
+  .input:focus-visible {
+    outline: 2px solid var(--squish-500);
+    outline-offset: 2px;
     border-color: var(--squish-300);
   }
 

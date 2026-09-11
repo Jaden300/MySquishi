@@ -13,5 +13,6 @@ export { Figure } from "./Figure";
 export { PageHeader } from "./PageHeader";
 export { Reveal } from "./Reveal";
 export { SectionHeader } from "./SectionHeader";
+export { Select, type SelectOption } from "./Select";
 export { StatTile } from "./StatTile";
 export { Tabs, TabPanel, type TabDef } from "./Tabs";

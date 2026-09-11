@@ -50,7 +50,17 @@ The logo is Squishi's face. Three components in `src/components/brand/`:
 
 The mark also appears as page furniture, and the rule is that it must never compete with content. `.brand-watermark` places one blob at four percent opacity in a panel's bottom right corner, behind the content and taking no pointer events. `.brand-watermark-sm` is the quieter variant for dense cards. `.brand-ground` washes the page with two soft radial gradients.
 
-Apply the watermark deliberately to chosen panels. It is not sprayed randomly, and its placement is deterministic so the layout is stable across renders.
+Apply the watermark deliberately to chosen panels. Its placement is deterministic so the layout is stable across renders.
+
+### The scatter field
+
+`BackgroundBlobs` in `src/components/Layout.tsx` also lays a field of fourteen marks behind the whole app. This is page texture rather than a per panel watermark, and the two do not overlap in purpose: the watermark belongs to a card, the scatter belongs to the page.
+
+- Placements are a frozen module level table of literal positions, never `Math.random()`. The arrangement must not reshuffle between renders, and a fixed table can be reasoned about and tested.
+- Positions are in `vw` and `vh`, so the field covers the viewport at 390px without crowding the narrow column.
+- Opacity runs 7 to 10 percent. The first pass used 3 to 6, which measured as correct against the contrast floor and was invisible on the near white ground: the page still read as flat, which was the complaint the field exists to answer. The cards it sits behind are opaque, so no text is ever read against a mark.
+- The silhouette comes from `BODY_PATH` in the pose library rather than a second copy of the shape, for the same reason `PoseArt` exists.
+- A few marks carry `bob` or `drift` with staggered negative delays so the field never pulses in unison. These are CSS animations, so the global reduced motion block already stops them.
 
 ## Layout and form
 
@@ -82,8 +92,15 @@ The replacement mechanic, applied throughout: the explanatory sentence moves ont
 - `StatTile` is one number, named. `size="hero"` is the one enormous number a page is allowed.
 - `Figure` is `ChartFrame` for anything hand drawn: the same loading, error and empty discipline, and `source="synthetic"` renders the badge automatically, so a hand built figure cannot dodge the honesty rule the way a bare `div` could.
 - `Tabs` implements roving tabindex with a Framer `layoutId` indicator.
+- `Select` is the one dropdown. A native `select` cannot have its popup styled, so five controls were rendering the operating system's list, arrow and rows inside a violet page. This is the listbox pattern instead: a `combobox` trigger and a `listbox` popup, which means reimplementing by hand the keyboard behaviour the native control gave away for free. Arrows move, Enter and Space commit, Escape closes and restores focus, Home and End jump, typing a letter jumps, and disabled options are skipped rather than merely refused. That is the reason it is written once here rather than per call site, and the reason it carries its own test file.
+- `Field` wraps a control in a `label`, or takes `htmlFor` and renders an associated one instead. `Select` needs the second form: it is a button and a popup, not a form element, so wrapping it would put a click target over the list and announce the label twice.
 - `Reveal` fades its children in once when first scrolled to, and returns them untouched under reduced motion.
 - `PoseSpot` is the single way a still pose reaches the page.
+- `Glyph` and `GlyphTile` in `src/components/figures/` carry the small line drawings that let a step, a failure or a pipeline node be recognised without reading it. Drawn rather than pulled from an icon font, so they inherit the palette and hold one stroke weight with the rest of the brand.
+
+Glyphs are duotone: a solid shape sits behind the stroke at 18 percent, both `currentColor`, so a glyph is one colour at two opacities and cannot drift off palette. They were outline only at 1.6px for a while, which at 24px in a flat tinted square read as a smudge rather than an object. The stroke is now 1.9.
+
+`GlyphTile` is the tile itself, and the one way an icon reaches a card. Four call sites hand rolled the same square before it existed, which is how two of them ended up with a flat wash and the other two with no tile at all. Its gradient runs violet to a hint of the mascot's coral, which is what stops it reading as a grey shade. Tone is `brand` or `alert` and is a function of meaning, never of which glyph it holds.
 
 ## Typography
 
@@ -94,7 +111,19 @@ Two faces, both self-hosted through `@fontsource-variable/*` and imported in `sr
 | Display | Fraunces Variable | `h1`, `h2`, `h3`, stat values, the wordmark |
 | Body | Plus Jakarta Sans Variable | everything else |
 
-Fraunces carries `font-variation-settings: "SOFT" 60, "WONK" 1`. The `SOFT` axis rounds the terminals, which is what makes the headings agree with the blob instead of sitting over it as a separate idea.
+Fraunces carries `font-variation-settings: "opsz" 48, "SOFT" 60, "WONK" 1`. The `SOFT` axis rounds the terminals, which is what makes the headings agree with the blob instead of sitting over it as a separate idea.
+
+### The axis import, which is load bearing
+
+Fraunces must be imported as `@fontsource-variable/fraunces/full.css`, not as the bare package. This is not a preference and it is easy to break silently:
+
+- The bare `@fontsource-variable/fraunces` entry point ships the **`wght` only** axis build. The `SOFT` and `WONK` declaration above then has no axes to move, the browser drops it without an error, and every heading in the app renders at `SOFT` 0: a hard, sharp, high contrast serif, which is the opposite of the intent. The app shipped in exactly that state for a while and the CSS looked correct the whole time, because a `font-variation-settings` naming an axis the file does not carry is not a mistake a browser reports.
+- `soft.css` plus `wonk.css` looks like the cheaper pick and is a trap. Each subset declares its own `@font-face` under the same family name and the same `unicode-range`, so the later import shadows the earlier one outright: that pairing downloads 98KB of Latin and ends up with `WONK` and no `SOFT`. One file carrying both axes is the only version that works.
+- `opsz` is pinned rather than left to the font. Fraunces defaults it to 9, the caption grade, drawn thin and high contrast for text a few millimetres tall, which looks brittle at heading sizes. 48 is the display end.
+
+The cost is a 121KB Latin woff2 against the 36KB `wght` only file. It is `font-display: swap` and off the critical path, and it is the price of the axes doing anything at all.
+
+`Wordmark` sets the same three axes inline, because it is SVG adjacent markup that the `h1, h2, h3` element rule does not reach, and it sits inches from an `h1` in the header where a different optical size would read as a second typeface.
 
 A bare `h1, h2, h3` element rule sets the display face, so a heading that forgets its class still gets the right one.
 
@@ -207,10 +236,24 @@ Warm, plain, direct. "Squeeze and hold" rather than "Initiate isometric contract
 These are components, not per page copy, so they cannot be forgotten:
 
 - `SyntheticBadge` renders wherever a record has `is_synthetic` true. It stays visible.
+- The demo mode control in the header marks the same fact one level up. See below.
 - `IntervalReadout` is the only component allowed to render a prediction, and it requires lower and upper bounds as props. A bare point estimate is therefore a type error rather than a review catch. The bounds are still attached to every number, carried as a `title` and an `.sr-only` span rather than printed beneath it: the requirement is that the uncertainty travels with the estimate, not that it occupies a line of the layout.
 - `ClinicalTooltip` reads its term map from `CLINICAL.md`.
 
 The same treatment applies to `KG_ESTIMATE_NOTE`, `PERCENTILE_NOTE` and `NON_GRIP_NOTE`. The constants are unchanged and still render on the element they qualify. `NotAMedicalDevice` remains visible in the footer, because consent references it.
+
+### Demo mode
+
+The backend seeds a synthetic patient at startup and the frontend reads it under a hardcoded id, so for a long time every visitor landed in a fully populated app with no way to tell the history was not theirs and no way out of it. The per record badge was honest about each row, but it labelled data nobody had asked for, and the empty states written for every panel were unreachable in practice.
+
+`src/store/demo.ts` makes that state explicit and reversible:
+
+- It is a client side filter on the `is_synthetic` flag that already rides on every session. Not a refetch, and not a backend change: seeding is untouched, the seeded rows are filtered rather than deleted, and turning demo mode back on restores them immediately.
+- It defaults to on and persists to `localStorage`, wrapped in `try/catch` because storage throws outright in a private window rather than returning null. A failure falls back to the default.
+- Pages derive from `useVisibleSessions` rather than from `sessions.data`, so one call site filters a whole page.
+- Model outputs are computed server side across the seeded history and a client side filter cannot reach inside them, so they are suppressed entirely when demo mode is off and nothing real is left. A forecast fitted on data the reader has just chosen to hide is not their forecast, and showing it would be the exact confusion demo mode exists to remove.
+
+The control sits in the header, borrows `SyntheticBadge`'s shape and diamond so the two read as one system, and collapses to the diamond alone under `sm`. Both stay: a mixed list still needs the per record badge while demo mode is on.
 
 ## Accessibility floor
 

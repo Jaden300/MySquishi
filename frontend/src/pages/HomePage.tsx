@@ -15,6 +15,7 @@ import { useEffect, useState } from "react";
 
 import { api } from "../lib/api";
 import { useApi } from "../lib/useApi";
+import { useVisibleSessions } from "../store/demo";
 import { SIGNAL_CHAIN } from "../lib/hardware";
 import { SquishiMascot } from "../components/SquishiMascot";
 import { PoseSpot } from "../components/brand/PoseSpot";
@@ -40,7 +41,13 @@ export function HomePage() {
   const models = useApi(() => api.models(), []);
 
   const all = sessions.data ?? [];
-  const reps = all.reduce((total, s) => total + (s.rep_count ?? 0), 0);
+  /* The headline tally follows demo mode: with it off, the number has to
+     describe the same sessions the rest of the app is showing. */
+  const visible = useVisibleSessions(sessions.data);
+  const reps = visible.reduce((total, s) => total + (s.rep_count ?? 0), 0);
+  /* DataSplit is the figure that quantifies the live to seeded mix, so it
+     keeps counting the full list in both modes. Filtering it would leave it
+     reporting a split it had already applied. */
   const syntheticSessions = all.filter((s) => s.is_synthetic).length;
 
   return (

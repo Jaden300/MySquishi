@@ -14,7 +14,7 @@
 import type { ReactNode } from "react";
 
 import type { ChainNode } from "../../lib/hardware";
-import { Glyph } from "./Glyph";
+import { GlyphTile } from "./Glyph";
 
 interface PipelineDiagramProps {
   nodes: ChainNode[];
@@ -39,9 +39,7 @@ export function PipelineDiagram({ nodes, slot }: PipelineDiagramProps) {
             title={node.detail}
             className="flex w-full flex-1 flex-col items-center justify-center gap-2 rounded-card border border-squish-100 bg-squish-50 px-3 py-4 text-center"
           >
-            <span className="text-squish-500">
-              <Glyph id={node.glyph} size={26} />
-            </span>
+            <GlyphTile id={node.glyph} size={24} />
             <span className="text-label text-squish-700">{node.label}</span>
             {slot?.[node.label] ?? null}
             {node.detail ? (

@@ -11,15 +11,35 @@ import type { ReactNode } from "react";
 export function Field({
   label,
   hint,
+  htmlFor,
   children,
 }: {
   label: string;
   hint?: string;
+  /**
+   * Set when the control is not a real form element. Select is a button and a
+   * listbox, so wrapping it in a label would put a click target over a popup
+   * and announce the label twice. Given this, the field renders a div with an
+   * explicitly associated label instead.
+   */
+  htmlFor?: string;
   children: ReactNode;
 }) {
+  const text = <span className="text-label text-ink">{label}</span>;
+
+  if (htmlFor) {
+    return (
+      <div className="flex flex-col gap-2" title={hint}>
+        <label htmlFor={htmlFor}>{text}</label>
+        {children}
+        {hint ? <span className="sr-only">{hint}</span> : null}
+      </div>
+    );
+  }
+
   return (
     <label className="flex flex-col gap-2" title={hint}>
-      <span className="text-label text-ink">{label}</span>
+      {text}
       {children}
       {hint ? <span className="sr-only">{hint}</span> : null}
     </label>

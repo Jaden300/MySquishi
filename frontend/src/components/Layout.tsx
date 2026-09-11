@@ -20,6 +20,8 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { NotAMedicalDevice } from "./Honesty";
 import { SquishiMark } from "./brand/SquishiMark";
 import { PoseSpot } from "./brand/PoseSpot";
+import { BODY_PATH } from "./brand/poses";
+import { useDemoStore } from "../store/demo";
 import { Wordmark } from "./brand/Wordmark";
 import { Button } from "./ui/Button";
 
@@ -65,7 +67,11 @@ export function Layout() {
             </span>
           </Link>
 
-          <nav className="flex flex-1 items-center justify-end gap-1">
+          <div className="flex flex-1 justify-end">
+            <DemoToggle />
+          </div>
+
+          <nav className="flex items-center gap-1">
             {NAV.map((item) => (
               <NavLink key={item.to} to={item.to} end={item.end}>
                 {({ isActive }) => (
@@ -122,16 +128,101 @@ export function Layout() {
 }
 
 /**
- * Three soft shapes drifting behind the app.
+ * The demo data control.
+ *
+ * Global state, so it sits in the shell rather than on a page. Deliberately
+ * borrows SyntheticBadge's shape and its diamond so the two read as one
+ * system: that component still marks individual records, and this one marks
+ * the mode. Both stay, because a mixed list needs the per record badge even
+ * while demo mode is on.
+ *
+ * The label carries a shape as well as a colour, which the accessibility
+ * floor requires, and collapses to the diamond alone under sm where the four
+ * navigation links already fill the row at 390px.
+ */
+function DemoToggle() {
+  const demoMode = useDemoStore((s) => s.demoMode);
+  const setDemoMode = useDemoStore((s) => s.setDemoMode);
+
+  if (!demoMode) {
+    return (
+      <button
+        type="button"
+        onClick={() => setDemoMode(true)}
+        className="rounded-pill px-3 py-1.5 text-label text-ink/60 transition-colors hover:text-squish-700"
+        title="Show the seeded demo history again."
+      >
+        <span aria-hidden="true" className="sm:hidden">
+          ◇
+        </span>
+        <span className="hidden sm:inline">Demo data</span>
+        <span className="sr-only">Turn demo data on</span>
+      </button>
+    );
+  }
+
+  return (
+    <span
+      className="inline-flex items-center gap-2 rounded-pill border border-squish-300 bg-squish-100 py-1 pl-3 pr-1 text-label text-squish-700"
+      title="You are looking at seeded demonstration data, not a real person's history."
+    >
+      <span aria-hidden="true">◇</span>
+      <span className="hidden sm:inline">Demo data</span>
+
+      <button
+        type="button"
+        onClick={() => setDemoMode(false)}
+        className="rounded-pill bg-mist px-2.5 py-1 text-label text-squish-700 transition-colors hover:bg-squish-50"
+      >
+        Exit
+        <span className="sr-only"> demo data</span>
+      </button>
+    </span>
+  );
+}
+
+/**
+ * The scattered mark field.
+ *
+ * Deterministic placements, never Math.random(): the arrangement must not
+ * reshuffle on every render, and a fixed table can be reasoned about and
+ * tested. Positions are in vw and vh so the field covers the viewport at
+ * 390px without crowding the narrow column.
+ *
+ * Opacity runs 7 to 10 percent. Below that the field was invisible against
+ * the near white ground and the page still read as flat, which was the whole
+ * complaint. Still decoration: the cards these sit behind are opaque, so no
+ * text is ever read against a mark.
+ */
+const SCATTER = Object.freeze([
+  { left: 4, top: 7, size: 74, rotate: -14, opacity: 0.1, drift: "bob" },
+  { left: 88, top: 4, size: 52, rotate: 18, opacity: 0.085, drift: "" },
+  { left: 27, top: 15, size: 40, rotate: 8, opacity: 0.075, drift: "" },
+  { left: 68, top: 19, size: 96, rotate: -21, opacity: 0.09, drift: "drift" },
+  { left: 12, top: 31, size: 58, rotate: 12, opacity: 0.085, drift: "" },
+  { left: 93, top: 36, size: 68, rotate: -8, opacity: 0.1, drift: "bob" },
+  { left: 46, top: 42, size: 44, rotate: 22, opacity: 0.07, drift: "" },
+  { left: 6, top: 54, size: 112, rotate: -17, opacity: 0.09, drift: "drift-slow" },
+  { left: 77, top: 58, size: 50, rotate: 6, opacity: 0.085, drift: "" },
+  { left: 33, top: 67, size: 82, rotate: -11, opacity: 0.1, drift: "bob" },
+  { left: 90, top: 74, size: 62, rotate: 15, opacity: 0.075, drift: "" },
+  { left: 16, top: 82, size: 46, rotate: -19, opacity: 0.085, drift: "" },
+  { left: 58, top: 88, size: 128, rotate: 10, opacity: 0.09, drift: "drift" },
+  { left: 81, top: 94, size: 56, rotate: -6, opacity: 0.07, drift: "" },
+]);
+
+/**
+ * The soft shapes and the scattered marks behind the app.
  *
  * The complaint that started this revamp was that the site felt static. Most
  * of the answer is elsewhere, in transitions and reveals, but a page of
  * charts sitting on a flat colour reads as dead even when its contents move.
+ * Three blurred blobs on a wash turned out to be close to flat anyway, so the
+ * mark field carries the texture and the blobs carry the movement.
  *
- * They are fixed, behind everything, at low opacity, and at three unsynced
- * periods so the arrangement never repeats in a way the eye can lock onto.
- * Nothing here carries information, so it is hidden from assistive technology
- * and stops entirely under reduced motion with the rest of the CSS animation.
+ * Everything here is fixed, behind everything else, and hidden from assistive
+ * technology. The CSS animations stop under reduced motion through the global
+ * block in index.css.
  */
 function BackgroundBlobs() {
   return (
@@ -142,6 +233,29 @@ function BackgroundBlobs() {
       <span className="drift absolute -left-24 top-16 block h-72 w-72 rounded-full bg-squish-300/25 blur-3xl" />
       <span className="drift-slow absolute -right-20 top-1/3 block h-96 w-96 rounded-full bg-squish-100/40 blur-3xl" />
       <span className="drift absolute bottom-0 left-1/3 block h-80 w-80 rounded-full bg-squish-500/10 blur-3xl [animation-delay:-8s]" />
+
+      {SCATTER.map((mark, i) => (
+        <svg
+          key={i}
+          viewBox="0 0 200 200"
+          width={mark.size}
+          height={mark.size}
+          className={`absolute block ${mark.drift}`}
+          style={{
+            left: `${mark.left}vw`,
+            top: `${mark.top}vh`,
+            opacity: mark.opacity,
+            transform: `rotate(${mark.rotate}deg)`,
+            /* Staggered so the field never pulses in unison. */
+            animationDelay: `${-(i * 1.7).toFixed(1)}s`,
+          }}
+        >
+          {/* The silhouette straight from the pose library, so the scatter
+              cannot drift out of step with the character the way a second
+              hand copy of the path would. */}
+          <path d={BODY_PATH} fill="var(--squish-700)" />
+        </svg>
+      ))}
     </div>
   );
 }

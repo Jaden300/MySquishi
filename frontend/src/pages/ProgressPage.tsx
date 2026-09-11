@@ -51,6 +51,7 @@ import {
   NON_GRIP_NOTE,
   allowsKilograms,
 } from "../lib/muscle";
+import { useVisibleSessions } from "../store/demo";
 import type { CohortPoint, Prediction, SessionSummary } from "../types/api";
 import { InsightsTab } from "./progress/InsightsTab";
 
@@ -99,6 +100,26 @@ export function ProgressPage() {
   );
 
   /*
+    Everything below derives from this list rather than from sessions.data, so
+    leaving demo mode filters the whole page from one place. With demo off the
+    seeded history drops out and the empty states below finally render.
+  */
+  const visible = useVisibleSessions(sessions.data);
+
+  /*
+    The model outputs are computed server side across the seeded history, so a
+    client side filter cannot reach inside them. Suppressing them entirely when
+    demo mode is off and nothing real is left is the honest option: a forecast
+    fitted on data the reader has just chosen to hide is not their forecast,
+    and showing it would be exactly the confusion demo mode exists to remove.
+  */
+  const modelsApply = visible.length > 0;
+  const forecastData = modelsApply ? forecast.data : null;
+  const plateauData = modelsApply ? plateau.data : null;
+  const anomaliesData = modelsApply ? anomalies.data : null;
+  const archetypeData = modelsApply ? archetype.data : null;
+
+  /*
     Oldest first for a trend line, grip only.
 
     The backend omits strength_kg entirely rather than nulling it for another
@@ -108,19 +129,19 @@ export function ProgressPage() {
     should not depend on a reader knowing what a serializer on the other side
     of the wire does. See docs/CLINICAL.md.
   */
-  const completed = (sessions.data ?? [])
+  const completed = visible
     .filter((s) => s.strength_kg != null && allowsKilograms(s.muscle))
     .slice()
     .reverse();
 
   // How many sessions the kilogram views leave out, so the omission can be
   // stated rather than silently applied.
-  const nonGripCount = (sessions.data ?? []).filter(
+  const nonGripCount = visible.filter(
     (s) => s.rep_count != null && !allowsKilograms(s.muscle),
   ).length;
 
-  const trend = buildTrend(completed, forecast.data, anomalies.data);
-  const done = (sessions.data ?? []).filter((s) => s.rep_count != null);
+  const trend = buildTrend(completed, forecastData, anomaliesData);
+  const done = visible.filter((s) => s.rep_count != null);
   const latestKg = completed.length
     ? (completed[completed.length - 1].strength_kg ?? null)
     : null;
@@ -133,8 +154,8 @@ export function ProgressPage() {
           : Math.max(best, s.mean_rep_quality),
     null,
   );
-  const plateauAt = plateauIndex(plateau.data, completed.length);
-  const anySynthetic = (sessions.data ?? []).some((s) => s.is_synthetic);
+  const plateauAt = plateauIndex(plateauData, completed.length);
+  const anySynthetic = visible.some((s) => s.is_synthetic);
 
   return (
     <div className="flex flex-col gap-8">
@@ -155,12 +176,19 @@ export function ProgressPage() {
         be where you are, not how to read a trend line.
       */}
       <div className="grid gap-4 sm:grid-cols-3">
+        {/*
+          The no kilograms fallback used to relabel this tile "Sessions
+          completed", which is the label the tile beside it already carries:
+          with no measured grip the page printed the same number twice under
+          the same words. It stays the grip tile and reports that it has
+          nothing yet, which is what an empty state is for.
+        */}
         <StatTile
           size="hero"
-          label={latestKg == null ? "Sessions completed" : "Estimated grip"}
-          value={latestKg ?? done.length}
+          label="Estimated grip"
+          value={latestKg}
           unit={latestKg == null ? undefined : "kg"}
-          decimals={latestKg == null ? 0 : 1}
+          decimals={1}
           note={latestKg == null ? undefined : KG_ESTIMATE_NOTE}
         />
         <StatTile
@@ -239,7 +267,7 @@ export function ProgressPage() {
             <div className="flex flex-col gap-6">
               <div className="grid gap-6 lg:grid-cols-2">
                 <AdherenceHeatmap
-                  sessions={sessions.data ?? []}
+                  sessions={visible}
                   loading={sessions.loading}
                   error={sessions.error}
                   onRetry={sessions.reload}
@@ -263,9 +291,9 @@ export function ProgressPage() {
 
               <Reveal>
                 <CohortScatter
-                  cohort={cohortPoints(archetype.data)}
-                  you={archetypeCoordinates(archetype.data)}
-                  yourArchetype={archetypeId(archetype.data)}
+                  cohort={cohortPoints(archetypeData)}
+                  you={archetypeCoordinates(archetypeData)}
+                  yourArchetype={archetypeId(archetypeData)}
                   loading={archetype.loading}
                   error={archetype.error}
                   onRetry={archetype.reload}
@@ -286,7 +314,7 @@ export function ProgressPage() {
                       Your progress has levelled off
                     </h3>
                     <p className="mt-1.5 text-body text-ink/80">
-                      {summaryOf(plateau.data) ??
+                      {summaryOf(plateauData) ??
                         "A changepoint was detected in your trend."}
                     </p>
                   </div>

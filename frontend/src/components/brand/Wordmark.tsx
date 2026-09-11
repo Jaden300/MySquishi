@@ -17,7 +17,10 @@ interface WordmarkProps {
 export function Wordmark({ size = 19, className = "" }: WordmarkProps) {
   const letter = {
     fontFamily: "var(--font-display)",
-    fontVariationSettings: '"SOFT" 60, "WONK" 1',
+    /* Matches the heading rule in index.css, opsz included. The wordmark sits
+       inches from an h1 in the header, so a different optical size on the two
+       would read as two different typefaces. */
+    fontVariationSettings: '"opsz" 48, "SOFT" 60, "WONK" 1',
     fontSize: size,
     fontWeight: 600,
     lineHeight: 1,

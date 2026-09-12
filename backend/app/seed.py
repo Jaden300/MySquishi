@@ -30,7 +30,7 @@ from sqlmodel import select
 from app.config import settings
 from app.db import create_db_and_tables, get_engine
 from app.ml import force
-from app.models import Calibration, Goal, Patient, Session
+from app.models import Calibration, Goal, Patient, Rep, Session
 
 DEMO_PATIENT_ID = "demo"
 
@@ -39,12 +39,38 @@ DEMO_PATIENT_ID = "demo"
 # forecast has somewhere to go.
 GOAL_FRACTION = 0.9
 
-# The calibration reference, as a fraction of baseline strength. Stands in for
-# the maximum voluntary contraction trial the patient would otherwise run.
-MVC_RMS_PER_KG = 0.006
+# How many of the most recent completed sessions get real Rep rows. See the
+# note in _seed_reps: enough that the first session someone opens has its
+# repetition charts filled, few enough that startup stays quick.
+DETAILED_SESSIONS = 3
 
 
-def _choose_patient(summary: pd.DataFrame) -> pd.Series:
+def _interior_miss_rate(cohort: pd.DataFrame) -> pd.Series:
+    """Fraction of each patient's missed sessions that fall mid programme.
+
+    Adherence rate alone does not say where the gaps are, and the difference
+    matters. A patient who trained perfectly and then stopped has the same
+    rate as one who missed the odd session throughout, but only the second
+    tells a story worth putting on a dashboard: the first, once the trailing
+    misses are trimmed, is a flawless run with an empty adherence heatmap.
+    """
+    completed = cohort["completed"].astype(bool)
+    order = cohort.sort_values(["patient_id", "session_index"])
+
+    def rate(group: pd.DataFrame) -> float:
+        flags = completed.loc[group.index]
+        if bool(flags.all()):
+            return 0.0
+        last_completed = flags.to_numpy().nonzero()[0]
+        if last_completed.size == 0:
+            return 0.0
+        interior = flags.to_numpy()[: last_completed[-1] + 1]
+        return float((~interior).sum()) / float((~flags.to_numpy()).sum())
+
+    return order.groupby("patient_id", sort=False).apply(rate, include_groups=False)
+
+
+def _choose_patient(summary: pd.DataFrame, cohort: pd.DataFrame) -> pd.Series:
     """Pick the cohort patient that makes the best demonstration.
 
     Scored rather than filtered, so this always returns someone even if the
@@ -59,6 +85,13 @@ def _choose_patient(summary: pd.DataFrame) -> pd.Series:
     # 85 percent is realistic and still encouraging.
     adherence = 1.0 - (scored["adherence_rate"] - 0.85).abs() * 3.0
 
+    # Gaps spread through the programme rather than bunched at the end. The
+    # trailing ones get trimmed, so a patient whose only misses are trailing
+    # arrives here looking imperfect and lands in the database perfect.
+    interior = (
+        scored["patient_id"].map(_interior_miss_rate(cohort)).fillna(0.0).astype(float)
+    )
+
     # Real improvement, so the forecast rises.
     gain = ((scored["final_kg"] - scored["baseline_kg"]) / scored["baseline_kg"]).clip(0, 2)
 
@@ -68,7 +101,7 @@ def _choose_patient(summary: pd.DataFrame) -> pd.Series:
         / scored["unaffected_kg"]
     ).clip(-1, 1)
 
-    scored["demo_score"] = length + adherence + gain + headroom * 2.0
+    scored["demo_score"] = length + adherence + interior * 1.5 + gain + headroom * 2.0
     scored = scored.sort_values("demo_score", ascending=False)
 
     return scored.iloc[0]
@@ -100,7 +133,7 @@ def seed_demo(*, force_reseed: bool = False) -> str | None:
 
         cohort = load_or_generate()
         summary = patient_summary(cohort)
-        chosen = _choose_patient(summary)
+        chosen = _choose_patient(summary, cohort)
         source_id = str(chosen["patient_id"])
 
         rows = cohort[cohort["patient_id"] == source_id].sort_values("session_index")
@@ -131,7 +164,13 @@ def seed_demo(*, force_reseed: bool = False) -> str | None:
         db.commit()
         db.refresh(calibration)
 
-        _seed_sessions(db, rows, calibration.id)
+        completed = _seed_sessions(db, rows, calibration.id)
+        db.commit()
+
+        # Needs the ids the commit above assigned.
+        for session in completed:
+            db.refresh(session)
+        _seed_reps(db, completed[-DETAILED_SESSIONS:], calibration.mvc_reference_rms)
         db.commit()
 
     return DEMO_PATIENT_ID
@@ -221,8 +260,109 @@ def _seed_calibration(db: DbSession, baseline_kg: float) -> Calibration:
     return calibration
 
 
-def _seed_sessions(db: DbSession, rows: pd.DataFrame, calibration_id: int | None) -> None:
+def _trim_trailing_misses(rows: pd.DataFrame) -> pd.DataFrame:
+    """Drop prescribed sessions after the last completed one.
+
+    Everything downstream anchors on the final row, so a programme ending on a
+    run of misses would either push the real history days into the past or put
+    a prescribed session in the future. Gaps before the last completed session
+    are left exactly as they are.
+    """
+    completed = rows.index[rows["completed"].astype(bool)]
+    if len(completed) == 0:
+        return rows
+    return rows.loc[: completed[-1]]
+
+
+def _seed_reps(db: DbSession, sessions: list[Session], mvc_reference_rms: float) -> None:
+    """Real repetitions for the most recent few sessions.
+
+    The rest of the history stores summaries alone. That is a deliberate
+    tradeoff rather than an oversight: none of the dashboard charts read Rep
+    rows, and synthesizing thousands of feature rows would slow every startup
+    for something almost nobody scrolls back to.
+
+    The newest sessions are the exception, because the newest session is the
+    one most likely to be opened first, and a session summary whose repetition
+    charts are all empty is a poor first impression. So the last few are
+    generated as actual signal and passed through the same preprocess, feature
+    extraction and scoring path a live session uses. Older sessions still show
+    the empty state, which stays honest: those repetitions were never recorded.
+    """
+    from app.ml import rep_quality
+    from app.ml.registry import registry
+    from app.signal.features import rep_features
+    from app.signal.filters import preprocess
+    from app.sim.signal_gen import RepSpec, SessionProtocol, SyntheticEmgGenerator
+
+    fs = settings.sample_rate
+
+    # A fresh clone has no trained artifacts. try_load returns None there, and
+    # rep_quality.score falls back to its heuristic, so the reps are still
+    # scored rather than the seed failing.
+    artifact = registry.try_load("M4")
+
+    for offset, session in enumerate(sessions):
+        if session.rep_count is None or session.id is None:
+            continue
+
+        # Seeded per session so a reseed reproduces the same repetitions, and
+        # so two sessions do not come out identical.
+        generator = SyntheticEmgGenerator(
+            sample_rate=fs,
+            seed=settings.cohort_seed + offset + 1,
+        )
+        target = float(session.mean_mvc or 55.0) / 100.0
+        generated = generator.build_session(
+            SessionProtocol(
+                reps=int(session.rep_count),
+                rep=RepSpec(target_mvc=float(np.clip(target, 0.2, 0.95))),
+            )
+        )
+        result = preprocess(generated.samples, fs)
+
+        for truth in generated.reps:
+            start_idx = int(truth.start_s * fs)
+            peak_idx = int(truth.peak_s * fs)
+            end_idx = min(int(truth.end_s * fs), result.envelope.size)
+            if start_idx >= end_idx:
+                continue
+
+            features = rep_features(
+                result.envelope,
+                result.filtered,
+                fs,
+                start_idx=start_idx,
+                peak_idx=peak_idx,
+                end_idx=end_idx,
+                mvc_reference=mvc_reference_rms,
+            )
+            quality = rep_quality.score(features, artifact)
+
+            db.add(
+                Rep(
+                    session_id=session.id,
+                    index=truth.index,
+                    start_s=truth.start_s,
+                    peak_s=truth.peak_s,
+                    end_s=truth.end_s,
+                    quality_point=quality.score.point,
+                    quality_lower=quality.score.lower,
+                    quality_upper=quality.score.upper,
+                    quality_top_factor=quality.top_factor,
+                    quality_feedback=quality.feedback,
+                    **{key: float(value) for key, value in features.items()},
+                )
+            )
+
+
+def _seed_sessions(
+    db: DbSession, rows: pd.DataFrame, calibration_id: int | None
+) -> list[Session]:
     """One Session row per prescribed session, ending near today.
+
+    Returns the completed sessions, oldest first, so the caller can attach
+    repetitions to the most recent few.
 
     The cohort carries its own absolute dates, which sit wherever the
     generator put them. Used as they are, the seeded history would end months
@@ -236,14 +376,21 @@ def _seed_sessions(db: DbSession, rows: pd.DataFrame, calibration_id: int | None
     That is what gives the adherence heatmap its gaps and M13 its signal: a
     missed session is data, not an absence of data.
 
-    No Rep rows are created. None of the dashboard charts read them, and
-    synthesizing thousands of feature rows would slow startup for nothing. The
-    rep level charts show their empty state for historical sessions, which is
-    honest: those repetitions were never recorded.
+    The anchor is the last *completed* session, not the last prescribed one.
+    Those differ whenever a programme ends on a run of misses, and anchoring on
+    the prescribed date then puts the most recent real session several days
+    back. The app opens on a patient who appears to have lapsed, M13 reports a
+    raised dropout risk, and the first thing anyone reads is a nudge about
+    losing the habit. Gaps earlier in the history are kept exactly as the
+    cohort generated them, because those are the ones worth showing. Prescribed
+    sessions after the last completed one are dropped rather than shifted, as a
+    session dated tomorrow is not something the cohort meant to express.
     """
+    rows = _trim_trailing_misses(rows)
     previous_date: pd.Timestamp | None = None
+    completed_sessions: list[Session] = []
 
-    # Shift so the last prescribed session falls yesterday.
+    # Shift so the last completed session falls yesterday.
     last_date = pd.Timestamp(rows["session_date"].iloc[-1])
     offset = pd.Timestamp(datetime.now(timezone.utc).date()) - last_date - pd.Timedelta(days=1)
 
@@ -280,9 +427,36 @@ def _seed_sessions(db: DbSession, rows: pd.DataFrame, calibration_id: int | None
             session.adherence_gap_days = gap
             session.duration_s = float(row["rep_count"]) * 10.5
 
+            # M4 scores a repetition on how steady the hold was and how clean
+            # the signal reading it was, so a session level mean can be derived
+            # from the two the cohort already carries rather than invented. The
+            # steadiness term dominates, which is what M4 does with a real rep.
+            steadiness = float(np.clip(1.0 - float(row["hold_cv"]) * 2.5, 0.0, 1.0))
+            cleanliness = float(np.clip(float(row["sqi_mean"]) / 100.0, 0.0, 1.0))
+            session.mean_rep_quality = round(
+                (steadiness * 0.7 + cleanliness * 0.3) * 100.0, 1
+            )
+
+            # Impulse is effort integrated over time: mean percent MVC across
+            # the reps, times how long they lasted.
+            session.total_impulse = round(
+                float(row["mean_mvc"]) * session.duration_s / 100.0, 1
+            )
+
+            # fatigue_r_squared, fatigue_p_value, anomaly_score and
+            # anomaly_direction are deliberately left null. The cohort carries
+            # a fatigue slope but not the fit behind it, and no anomaly score
+            # at all, so there is nothing to derive them from that would not be
+            # a number made up to fill a column. The charts show their empty
+            # state instead, which is the honest reading: those quantities were
+            # never computed for these sessions.
+
             previous_date = session_date
+            completed_sessions.append(session)
 
         db.add(session)
+
+    return completed_sessions
 
 
 def main() -> None:

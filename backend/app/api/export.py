@@ -1,11 +1,11 @@
 """Export routes.
 
-CSV now. PDF is Phase 4 and says so rather than pretending to be missing.
+CSV for the raw numbers, PDF for the clinician summary.
 """
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi.responses import PlainTextResponse
 from sqlmodel import Session as DbSession
 from sqlmodel import select
@@ -72,14 +72,31 @@ def export_session_reps(
 
 
 @router.get("/report.pdf")
-def export_report() -> None:
-    """The clinician PDF. Phase 4."""
-    raise HTTPException(
-        status_code=501,
-        detail=(
-            "The PDF report arrives in Phase 4. Session data is available as "
-            "CSV today, from /api/export/sessions.csv."
-        ),
+def export_report(
+    patient_id: str,
+    db: DbSession = Depends(get_session),
+) -> Response:
+    """A patient's clinician report as PDF.
+
+    build_report is imported here rather than at module scope. It pulls in
+    reportlab, and register_routers swallows ImportError, so a failure at
+    module scope would take the working CSV routes down with it silently.
+    """
+    from app.export.report import build_report
+
+    try:
+        pdf = build_report(patient_id, db)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    return Response(
+        pdf,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": (
+                f'attachment; filename="mysquishi-{patient_id}-report.pdf"'
+            )
+        },
     )
 
 

@@ -14,7 +14,7 @@ from sqlmodel import Session as DbSession
 from sqlmodel import select
 
 from app.db import get_engine
-from app.models import Calibration, Goal, Patient, Session
+from app.models import Calibration, Goal, Patient, Rep, Session
 from app.seed import DEMO_PATIENT_ID, seed_demo
 
 
@@ -97,6 +97,71 @@ class TestDemoHistory:
         days_ago = (datetime.now(timezone.utc) - last).days
 
         assert 0 <= days_ago <= 3, f"demo history ends {days_ago} days ago"
+
+    def test_ends_on_a_completed_session(self, sessions: list[Session]) -> None:
+        """Anchoring on the last prescribed session rather than the last
+        completed one puts the most recent real session days in the past
+        whenever a programme ends on a run of misses. The app then opens on a
+        patient who looks like they have lapsed, and M13 leads with a nudge
+        about losing the habit.
+        """
+        assert sessions[-1].rep_count is not None
+
+    def test_recent_completed_session_is_yesterday(
+        self, sessions: list[Session]
+    ) -> None:
+        completed = [s for s in sessions if s.rep_count is not None]
+        last = completed[-1].started_at
+        last = last if last.tzinfo else last.replace(tzinfo=timezone.utc)
+        days_ago = (datetime.now(timezone.utc) - last).days
+
+        assert days_ago <= 1, f"last completed session was {days_ago} days ago"
+
+    def test_gaps_fall_inside_the_programme(self, sessions: list[Session]) -> None:
+        """Trailing misses are trimmed, so the gaps that remain are the ones
+        worth drawing: a patient who missed the odd session throughout, not one
+        who trained perfectly and then stopped."""
+        flags = [s.rep_count is not None for s in sessions]
+        missed_positions = [i for i, done in enumerate(flags) if not done]
+
+        assert missed_positions, "no gaps left for the adherence heatmap"
+        assert max(missed_positions) < len(flags) - 1
+
+    def test_recent_sessions_carry_repetitions(
+        self, sessions: list[Session]
+    ) -> None:
+        """The newest session is the one most likely to be opened first, and
+        its repetition charts should not all be empty."""
+        completed = [s for s in sessions if s.rep_count is not None]
+        newest = completed[-1]
+
+        with DbSession(get_engine()) as db:
+            reps = db.exec(select(Rep).where(Rep.session_id == newest.id)).all()
+
+        assert len(reps) == newest.rep_count
+        assert all(r.quality_point is not None for r in reps)
+
+    def test_older_sessions_store_summaries_alone(
+        self, sessions: list[Session]
+    ) -> None:
+        """Only the most recent few get repetitions. Synthesizing thousands of
+        feature rows would slow every startup for something nobody scrolls back
+        to."""
+        completed = [s for s in sessions if s.rep_count is not None]
+        oldest = completed[0]
+
+        with DbSession(get_engine()) as db:
+            reps = db.exec(select(Rep).where(Rep.session_id == oldest.id)).all()
+
+        assert reps == []
+
+    def test_completed_sessions_carry_quality_and_impulse(
+        self, sessions: list[Session]
+    ) -> None:
+        completed = [s for s in sessions if s.rep_count is not None]
+
+        assert all(s.mean_rep_quality is not None for s in completed)
+        assert all(s.total_impulse is not None for s in completed)
 
     def test_spans_a_plausible_programme_length(self, sessions: list[Session]) -> None:
         weeks = (sessions[-1].started_at - sessions[0].started_at).days / 7.0

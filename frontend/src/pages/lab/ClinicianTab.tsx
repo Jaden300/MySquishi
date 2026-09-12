@@ -91,6 +91,15 @@ export function ClinicianTab() {
             >
               Export CSV
             </Button>
+            {/* The PDF is the summary a clinician takes away: headline
+                measures, the trend, and the log. The CSV is the same data
+                for anyone who wants to compute on it. */}
+            <Button
+              variant="secondary"
+              href={`/api/export/report.pdf?patient_id=${PATIENT}`}
+            >
+              Export PDF
+            </Button>
           </div>
         }
       >

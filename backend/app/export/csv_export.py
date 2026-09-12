@@ -20,6 +20,10 @@ SESSION_COLUMNS = (
     "source_id",
     "is_live",
     "is_synthetic",
+    # The clinical gate key. Without it a reader cannot tell which rows the
+    # kilogram column is valid for, and estimated_grip_kg is empty on every
+    # other muscle with nothing to say why. See app/clinical_gate.py.
+    "muscle",
     "rep_count",
     "mean_mvc_pct",
     "peak_mvc_pct",
@@ -59,6 +63,7 @@ REP_COLUMNS = (
     "quality_score",
     "quality_lower",
     "quality_upper",
+    "quality_top_factor",
     "quality_feedback",
 )
 
@@ -71,6 +76,7 @@ def _session_row(session: Session) -> list[object]:
         session.source_id,
         session.is_live,
         session.is_synthetic,
+        session.muscle,
         session.rep_count,
         session.mean_mvc,
         session.peak_mvc,
@@ -112,6 +118,7 @@ def _rep_row(rep: Rep) -> list[object]:
         rep.quality_point,
         rep.quality_lower,
         rep.quality_upper,
+        rep.quality_top_factor,
         rep.quality_feedback,
     ]
 

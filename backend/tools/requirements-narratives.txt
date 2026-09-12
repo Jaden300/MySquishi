@@ -1,0 +1,15 @@
+# Narrative generation only. Deliberately not in requirements.txt.
+#
+# The app never calls a model. `tools/write_narratives.py` runs offline on the
+# builder's machine and writes app/data/narratives.json, which is committed, so
+# a deployed instance and a fresh clone both read prose from disk with no
+# network and no key. Installing an SDK the app never imports would put a
+# module in the environment that app/api/__init__.py could fail to import
+# silently, taking the ML routes with it.
+#
+# Same pattern as tools/requirements-probe.txt: a tool dependency, installed
+# only by the person running the tool.
+#
+#   .venv/bin/pip install -r tools/requirements-narratives.txt
+
+anthropic

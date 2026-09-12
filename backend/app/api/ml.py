@@ -9,6 +9,9 @@ it.
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
+from functools import lru_cache
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session as DbSession
@@ -26,6 +29,7 @@ from app.ml import (
     plateau,
     prescriber,
     time_to_goal,
+    weekly,
 )
 from app.ml.explain import Explanation
 from app.ml.registry import registry
@@ -473,6 +477,171 @@ def get_prescription(
     return _wrap("M8", plan.to_dict(), explanation, degraded=False)
 
 
+@lru_cache(maxsize=1)
+def _narrative_fixture() -> dict[str, dict[str, str]]:
+    """Prose written ahead of time, keyed by patient.
+
+    Written by tools/write_narratives.py and committed, so a fresh clone and an
+    offline demo both have it. Absent, unreadable or malformed all mean the
+    same thing here: there is no written narrative, and the caller composes one
+    from the models instead.
+    """
+    path = Path(__file__).resolve().parent.parent / "data" / "narratives.json"
+    try:
+        loaded = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+    return loaded if isinstance(loaded, dict) else {}
+
+
+def _written_narrative(patient_id: str) -> str:
+    entry = _narrative_fixture().get(patient_id) or {}
+    return entry.get("latest", "") if isinstance(entry, dict) else ""
+
+
+def _narrative(
+    patient_id: str,
+    db: DbSession,
+    rollup: weekly.WeeklyRollup,
+    sessions: list[Session],
+) -> dict[str, str]:
+    """The week in review, assembled from what the other models already said.
+
+    Each clause is a sentence a model produced for its own card, so the
+    paragraph makes no claim that is not already being made elsewhere and
+    already gated. A card that raises is one this patient has no data for, and
+    it is simply left out.
+    """
+    upstream: list[Explanation] = []
+    for builder in (
+        lambda: get_plateau(patient_id, db),
+        lambda: get_forecast(patient_id, db),
+        lambda: get_adherence(patient_id, db),
+        lambda: get_percentile(patient_id, db),
+    ):
+        try:
+            # Only the summary sentence is wanted, so the envelope's
+            # explanation is unwrapped here rather than round tripped back
+            # into a domain object for one field.
+            upstream.append(Explanation(summary=builder().explanation.summary))
+        except HTTPException:
+            continue
+
+    try:
+        reasons = list(get_prescription(patient_id, db).value["reasons"])  # type: ignore[index]
+    except (HTTPException, KeyError, TypeError):
+        reasons = []
+
+    muscles = {s.muscle for s in sessions}
+
+    text, source = weekly.compose_narrative(
+        rollup,
+        upstream,
+        muscles=muscles,
+        prescription=reasons,
+    )
+
+    # Prose written in advance, if there is any for this patient. Read from a
+    # committed file rather than fetched: nothing here touches the network, so
+    # a demo works with the interface down. The gate runs again on the way out
+    # because the fixture is generated text and the history may have changed
+    # muscle since it was written.
+    written = weekly.assert_gate_safe(_written_narrative(patient_id), muscles)
+    if written:
+        return {"text": written, "source": "written"}
+
+    # An empty string means the gate refused the composition rather than that
+    # there was nothing to say, so fall back to the rollup's own summary. It
+    # is built from session counts alone and carries no gated claim.
+    if not text and rollup.explanation is not None:
+        text = rollup.explanation.summary
+
+    return {"text": text, "source": source}
+
+
+@router.get("/weekly/{patient_id}", response_model=PredictionOut)
+def get_weekly(
+    patient_id: str,
+    db: DbSession = Depends(get_session),
+) -> PredictionOut:
+    """M15: the week by week rollup.
+
+    Reads every session rather than only the completed ones, because a
+    prescribed session that was missed is what adherence is made of.
+    """
+    patient = _patient(db, patient_id)
+    sessions = list(
+        db.exec(
+            select(Session)
+            .where(Session.patient_id == patient_id)
+            .order_by(Session.started_at)  # type: ignore[arg-type]
+        ).all()
+    )
+
+    # Memoized on session count and on the calendar week. Unlike M9 the answer
+    # moves without a new session: the current week is partial, and it stops
+    # being partial when the week turns over.
+    today = datetime.now(timezone.utc).date()
+    year, week, _ = today.isocalendar()
+    key = f"{patient_id}:{len(sessions)}:{year}-{week}"
+    cached = _cached_insight(db, patient_id, "M15", key)
+
+    if cached:
+        payload = json.loads(cached.payload_json)
+        return _wrap(
+            "M15",
+            payload["value"],
+            Explanation(**payload["explanation_raw"]),
+            degraded=False,
+            is_synthetic=patient.is_synthetic,
+        )
+
+    rollup = weekly.roll_up(sessions, today=today)
+    value = rollup.to_dict()
+    explanation = rollup.explanation
+    assert isinstance(explanation, Explanation)
+    value["narrative"] = _narrative(patient_id, db, rollup, sessions)
+
+    # Only cache a real rollup, and only if no concurrent request beat us to
+    # it. The unique constraint on InsightCache settles the race; this check
+    # just skips the common case. Same reasoning as M9 above.
+    if not rollup.insufficient_data and not _cached_insight(
+        db, patient_id, "M15", key
+    ):
+        db.add(
+            InsightCache(
+                patient_id=patient_id,
+                model_id="M15",
+                key=key,
+                payload_json=json.dumps(
+                    {
+                        "value": value,
+                        "explanation_raw": {
+                            "summary": explanation.summary,
+                            "factors": [],
+                            "method": explanation.method,
+                        },
+                    }
+                ),
+            )
+        )
+        try:
+            db.commit()
+        except Exception:  # noqa: BLE001
+            db.rollback()
+
+    # Aggregation of rows that already exist, so there is no trained artifact
+    # this could be standing in for.
+    return _wrap(
+        "M15",
+        value,
+        explanation,
+        degraded=False,
+        is_synthetic=patient.is_synthetic,
+    )
+
+
 @router.get("/insights/{patient_id}", response_model=list[PredictionOut])
 def get_insights(
     patient_id: str,
@@ -485,8 +654,10 @@ def get_insights(
     """
     cards: list[PredictionOut] = []
 
-    # Ordered by what most warrants attention.
+    # Ordered by what most warrants attention. The weekly digest leads: it is
+    # the widest view, and the rest read as detail underneath it.
     for builder in (
+        lambda: get_weekly(patient_id, db),
         lambda: get_plateau(patient_id, db),
         lambda: get_forecast(patient_id, db),
         lambda: get_adherence(patient_id, db),

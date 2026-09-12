@@ -22,6 +22,7 @@ Stack: scikit-learn, SciPy, NumPy, Pandas. Models stay small and fast, and the w
 | M12 | Recovery archetype | KMeans(4) plus PCA(2) | archetype plus coordinates | two most separating features | build time | cohort |
 | M13 | Adherence risk | LogisticRegression | probability Interval | coefficients | build time | cohort |
 | M14 | Cohort percentile | empirical percentiles | percentile Interval | reference and n | build time | cohort, M3 |
+| M15 | Weekly rollup | ISO week aggregation | per week Intervals plus cross week change | week counts, misses, quiet weeks | request time, memoized | sessions |
 
 ## Dependency gates
 
@@ -77,6 +78,10 @@ Selection uses **expanding window time series cross validation**. Shuffled cross
 
 **M14 cohort percentile normalization.** Empirical percentile curves by age band and sex, plus the EWGSOP2 thresholds as reference lines. Places an absolute number in context. The reference is approximate and synthetic, and carries a flag the UI must display.
 
+**M15 weekly rollup.** Sessions bucketed into ISO weeks off `started_at`, which is the unit a patient and a clinician actually talk in. Weeks with no sessions are emitted rather than skipped, because a silence is the most informative thing a rollup can show, and a prescribed session that was never completed counts toward adherence and toward nothing else. The current week is flagged partial and excluded from every trend, since comparing a two day week against whole ones manufactures a decline.
+
+The uncertainty is two quantities and they are treated differently. Within a week the interval is the observed spread of the sessions themselves, matching the clinician report, because those sessions are the population rather than a sample from one. Across weeks the change genuinely is an estimate, so it carries a bootstrap interval. The kilogram figure narrows to the grip sessions in each week, per the clinical gate.
+
 ## Explainability
 
 Every model output shown to a user is accompanied by what drove it. Tree models use permutation importance, linear models use coefficient inspection. Every model returns the same `Explanation` shape: a summary, a list of factors with name, contribution, direction, and plain text, and the method used.
@@ -91,4 +96,4 @@ Every predictive model returns an `Interval` with point, lower, upper, and level
 
 Cohort trained and cached to joblib: M1, M4, M6, M7, M12, M13, M14. Written by `ml/train_all.py` along with a manifest recording version, seed, timestamp, and per model cross validation metrics.
 
-Fitted per session or per request: M2 (deterministic), M3 (per user at calibration, persisted on the calibration row), M5, M8, M9, M10, M11. M9 is the only request time fit heavy enough to notice, and with sixty or fewer observations a GP fit is milliseconds, but it is memoized on patient and session count anyway.
+Fitted per session or per request: M2 (deterministic), M3 (per user at calibration, persisted on the calibration row), M5, M8, M9, M10, M11, M15. M9 is the only request time fit heavy enough to notice, and with sixty or fewer observations a GP fit is milliseconds, but it is memoized on patient and session count anyway. M15 is memoized too, on session count and on the calendar week, because its answer moves when the week turns over even with no new session.

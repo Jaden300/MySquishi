@@ -152,6 +152,55 @@ class TestPercentileIsGripOnly:
         assert " kg" not in blob
 
 
+class TestWeeklyRollupIsGated:
+    """M15 aggregates, and an aggregate is where a gated figure hides best.
+
+    The percentile test above covers the flat fields. These cover the nested
+    ones: M15 puts its kilogram figure inside each week rather than at the top
+    level, so a change to WeekBucket.to_dict could reintroduce it without
+    failing anything else in this file.
+    """
+
+    def test_no_week_reports_kilograms_for_a_non_grip_history(
+        self, client: TestClient
+    ) -> None:
+        response = client.get("/api/ml/weekly/biceps-only")
+        assert response.status_code == 200
+
+        value = response.json()["value"]
+        assert value["weeks"], "the biceps session should have produced a week"
+
+        for week in value["weeks"]:
+            assert "strength_kg" not in week
+            # Effort and quality generalize to any muscle, so their absence
+            # would mean the gate had taken too much rather than too little.
+            assert "mean_mvc" in week or week["session_count"] == 0
+
+        assert "strength_change" not in value
+
+    def test_no_kilogram_prose_reaches_a_non_grip_rollup(
+        self, client: TestClient
+    ) -> None:
+        """The summary is generated from the numbers, so it has to be gated at
+        the point it is written rather than scrubbed afterwards."""
+        blob = json.dumps(client.get("/api/ml/weekly/biceps-only").json()).lower()
+
+        assert "ewgsop2" not in blob
+        assert " kg" not in blob
+        assert "kilogram" not in blob
+
+    def test_a_grip_history_still_reports_kilograms(
+        self, client: TestClient
+    ) -> None:
+        """The gate has to withhold the claim without suppressing the valid
+        one, or it is just a broken endpoint."""
+        value = client.get("/api/ml/weekly/demo").json()["value"]
+
+        assert value["insufficient_data"] is False
+        assert "strength_change" in value
+        assert any("strength_kg" in week for week in value["weeks"])
+
+
 class TestCalibrationIsPerMuscle:
     def test_calibrating_one_muscle_leaves_another_active(
         self, client: TestClient

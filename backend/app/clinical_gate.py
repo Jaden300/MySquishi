@@ -111,8 +111,17 @@ def require_grip(muscle: str | None, claim: str) -> None:
     )
 
 
+# Session fields that are only meaningful on forearm grip. Everything else
+# describes recruitment and hold quality, which generalize to any skeletal
+# muscle. This lives here rather than beside any one consumer: the PDF report
+# and the weekly rollup both narrow their inputs by it, and a second copy is
+# how the gate drifts out of step with itself.
+GATED_METRICS = frozenset({"strength_kg"})
+
+
 __all__ = [
     "DEFAULT_MUSCLE",
+    "GATED_METRICS",
     "GRIP",
     "MUSCLES",
     "MUSCLE_LABELS",

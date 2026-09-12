@@ -10,6 +10,8 @@ behind the model stack it is meant to cover.
 
 from __future__ import annotations
 
+from datetime import date, datetime, timedelta, timezone
+
 import numpy as np
 import pytest
 
@@ -25,12 +27,14 @@ from app.ml import (
     rep_quality,
     time_to_goal,
     forecast,
+    weekly,
 )
 from app.ml.explain import Interval
+from app.models import Session
 from app.signal.features import REP_FEATURE_KEYS
 from app.sim.cohort_gen import load_or_generate, patient_summary
 
-# Every model in the M1 to M14 stack, and where its uncertainty comes from.
+# Every model in the M1 to M15 stack, and where its uncertainty comes from.
 # A model that legitimately returns no interval is listed with a reason, so
 # the absence is a decision rather than an oversight.
 NON_INTERVAL_MODELS = {
@@ -39,6 +43,23 @@ NON_INTERVAL_MODELS = {
     "M9": "returns a band per forecast step, asserted separately in test_ml_models",
     "M12": "returns a categorical archetype with a confidence, not an interval",
 }
+
+# The models checked below. One list rather than three copies of it: the
+# parametrize decorators repeat, and a model added to two of them but not the
+# third would be half covered without anything saying so.
+INTERVAL_MODELS = [
+    "M1",
+    "M3",
+    "M4",
+    "M5",
+    "M6",
+    "M7",
+    "M10",
+    "M11",
+    "M13",
+    "M14",
+    "M15",
+]
 
 
 @pytest.fixture(scope="module")
@@ -139,6 +160,26 @@ def _intervals(cohort, summary) -> dict[str, Interval]:
         artifact=percentile.train(cohort, summary=summary),
     ).percentile
 
+    # M15 weekly rollup, whose adherence rate carries the interval. Built from
+    # plain Session rows rather than the database: this file is pure unit and
+    # has no engine behind it.
+    monday = datetime(2026, 7, 6, 9, 0, tzinfo=timezone.utc)
+    found["M15"] = weekly.roll_up(
+        [
+            Session(
+                patient_id="interval-test",
+                started_at=monday + timedelta(days=7 * week + day),
+                rep_count=10,
+                mean_mvc=55.0 + week,
+                strength_kg=20.0 + week,
+                mean_rep_quality=0.8,
+            )
+            for week in range(6)
+            for day in range(2)
+        ],
+        today=date(2026, 12, 1),
+    ).adherence_rate
+
     return found
 
 
@@ -148,37 +189,28 @@ def intervals(cohort, summary):
 
 
 class TestIntervalDiscipline:
-    @pytest.mark.parametrize(
-        "model_id",
-        ["M1", "M3", "M4", "M5", "M6", "M7", "M10", "M11", "M13", "M14"],
-    )
+    @pytest.mark.parametrize("model_id", INTERVAL_MODELS)
     def test_bounds_are_ordered(self, intervals, model_id):
         interval = intervals[model_id]
         assert interval.lower <= interval.point <= interval.upper
 
-    @pytest.mark.parametrize(
-        "model_id",
-        ["M1", "M3", "M4", "M5", "M6", "M7", "M10", "M11", "M13", "M14"],
-    )
+    @pytest.mark.parametrize("model_id", INTERVAL_MODELS)
     def test_bounds_are_finite(self, intervals, model_id):
         interval = intervals[model_id]
         assert np.isfinite([interval.point, interval.lower, interval.upper]).all()
 
-    @pytest.mark.parametrize(
-        "model_id",
-        ["M1", "M3", "M4", "M5", "M6", "M7", "M10", "M11", "M13", "M14"],
-    )
+    @pytest.mark.parametrize("model_id", INTERVAL_MODELS)
     def test_level_is_a_probability(self, intervals, model_id):
         assert 0.0 < intervals[model_id].level < 1.0
 
     def test_every_model_is_accounted_for(self, intervals):
         """Completeness.
 
-        Every model from M1 to M14 either returns an interval that is checked
+        Every model from M1 to M15 either returns an interval that is checked
         above, or is listed with a reason why it does not. A new model cannot
         slip past this file unnoticed.
         """
-        expected = {f"M{i}" for i in range(1, 15)}
+        expected = {f"M{i}" for i in range(1, 16)}
         covered = set(intervals) | set(NON_INTERVAL_MODELS)
 
         assert covered == expected, f"unaccounted for: {expected - covered}"

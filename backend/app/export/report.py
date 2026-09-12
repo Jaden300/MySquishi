@@ -26,7 +26,12 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
-from app.clinical_gate import MUSCLE_LABELS, NON_GRIP_NOTE, allows_kilograms
+from app.clinical_gate import (
+    GATED_METRICS,
+    MUSCLE_LABELS,
+    NON_GRIP_NOTE,
+    allows_kilograms,
+)
 
 if TYPE_CHECKING:  # pragma: no cover
     from app.models import Patient, Session
@@ -49,11 +54,6 @@ METRICS: tuple[tuple[str, str, str, str], ...] = (
     ("hold_cv_mean", "Hold steadiness", "coefficient of variation", ""),
     ("sqi_mean", "Signal quality", "SQI", ""),
 )
-
-# Measures only meaningful on forearm grip. The rest describe recruitment and
-# hold quality, which generalize to any skeletal muscle.
-GATED_METRICS = frozenset({"strength_kg"})
-
 
 def _spread(values: list[float]) -> tuple[float, float, float]:
     """Mean with the observed range around it.

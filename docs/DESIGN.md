@@ -306,6 +306,46 @@ Speech is an enhancement and fails silently. A browser without
 the session working, and the toggle is hidden outright where the API is absent
 rather than offering a control that does nothing.
 
+## Camera
+
+**Loaded at the moment it is first needed, and never before.** MediaPipe is
+about 19.5MB of wasm and model weights against a repository whose largest
+tracked file is 1.2MB, so it is fetched from a CDN by a dynamic import rather
+than installed. The bundle is unchanged for anyone who never opens the tab, and
+there is no dependency in `package.json` to back out. The cost is that this one
+feature needs the network on its first run, which it states plainly when it
+does not have it. This is the only part of the app that is not offline first,
+and it is an extension precisely so that stays true of everything else.
+
+**Off by default, for a stronger reason than voice.** An app that starts
+talking unasked is a bad first impression. An app that turns the webcam on
+unasked is a different category of wrong. Nothing acquires a camera until
+somebody presses the button, and leaving the tab releases it: the singleton in
+`lib/handTracker.ts` exists so there is exactly one owner of the stream, since
+a component remounting under StrictMode would acquire the device twice and
+leave a track running. An indicator light still on after the reader has left
+the page is the most alarming bug this feature could have.
+
+**Every failure is its own message.** A panel that says only "camera failed"
+reads as broken software; a reader told the permission was denied knows what to
+do next. There is separate copy for an insecure context, a browser with no
+camera API, no camera found, a denied or dismissed permission, a camera another
+application is holding, a model that could not be downloaded and one that
+downloaded but would not start. A dismissed prompt and an explicit denial are
+deliberately not split: Chrome and Firefox report both as `NotAllowedError`
+with nothing to tell them apart, so the copy covers the two rather than
+printing a guess.
+
+**The video never leaves the browser, and the panel says so first.** This is
+the only sensor in the app that produces a picture of the person using it, and
+a webcam page that does not answer that question has answered it with silence.
+The camera measures motion where the sEMG measures effort, so nothing on the
+tab may print kilograms, a percentile, EWGSOP2, an MCID or a percentage of
+maximum, and the thumb to finger distance is called aperture rather than grip:
+this app defines grip against a Jamar dynamometer in kilograms, and a camera
+knows nothing about force. `CameraTab.test.tsx` asserts none of those words
+reach the panel.
+
 ## Accessibility floor
 
 Non-negotiable:

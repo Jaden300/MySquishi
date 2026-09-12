@@ -10,15 +10,17 @@ import { useSearchParams } from "react-router-dom";
 
 import { ErrorBoundary } from "../components/Layout";
 import { PageHeader, TabPanel, Tabs, type TabDef } from "../components/ui";
+import { CameraTab } from "./lab/CameraTab";
 import { ClinicianTab } from "./lab/ClinicianTab";
 import { HardwareTab } from "./lab/HardwareTab";
 import { SettingsTab } from "./lab/SettingsTab";
 
-type LabTab = "clinician" | "hardware" | "settings";
+type LabTab = "clinician" | "hardware" | "camera" | "settings";
 
 const TABS: TabDef<LabTab>[] = [
   { id: "clinician", label: "Clinician" },
   { id: "hardware", label: "Hardware" },
+  { id: "camera", label: "Camera" },
   { id: "settings", label: "Settings" },
 ];
 
@@ -50,6 +52,7 @@ export function LabPage() {
         <ErrorBoundary key={tab}>
           {tab === "clinician" ? <ClinicianTab /> : null}
           {tab === "hardware" ? <HardwareTab /> : null}
+          {tab === "camera" ? <CameraTab /> : null}
           {tab === "settings" ? <SettingsTab /> : null}
         </ErrorBoundary>
       </TabPanel>

@@ -141,4 +141,15 @@ See §15 of `MySquishi_Plan.md`.
       bootstrap, and the kilogram figure narrows to the grip sessions in each
       week. `app/ml/weekly.py`, `GET /api/ml/weekly/{patient_id}`, leading the
       insight cards
-- [ ] Camera detector: MediaPipe Hands, 21 landmarks at 30fps, browser only
+- [x] Camera detector: MediaPipe Hands, 21 landmarks at 30fps, browser only.
+      The Camera tab of `/lab`: a webcam preview with the landmarks drawn over
+      it and an open or closed reading, scaled by the width of the hand so
+      moving nearer the lens does not change it. Built deliberately isolated,
+      since it is the one feature most likely to be pulled: five files plus
+      three lines in `LabPage.tsx`, no backend, no database, no dependency in
+      `package.json`. MediaPipe is fetched from a CDN by dynamic import at
+      first use rather than installed, so the bundle is untouched for anyone
+      who never opens the tab. Standalone by choice. It writes nothing to a
+      session and prints no clinical figure: a camera measures motion where
+      the sEMG measures effort, and pairing the two is a separate increment.
+      `lib/handTracker.ts`

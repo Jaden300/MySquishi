@@ -101,7 +101,7 @@ export function IntervalReadout({
       >
         {fmt(point)}
         {suffix ? (
-          <span className="font-body text-h3 text-ink/50">{suffix}</span>
+          <span className="font-body text-h3 text-ink/70">{suffix}</span>
         ) : null}
       </span>
       <span className="sr-only">{label ? `${label}. ` : ""}{range}</span>

@@ -69,7 +69,7 @@ function SplitBar({
 
   return (
     <div className="flex flex-col gap-2">
-      <span className="text-label text-ink/60">{label}</span>
+      <span className="text-label text-ink/70">{label}</span>
 
       {total === 0 ? (
         <p className="text-body text-ink/70">{emptyMessage}</p>

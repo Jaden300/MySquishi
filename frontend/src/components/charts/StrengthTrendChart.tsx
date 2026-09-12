@@ -23,6 +23,7 @@ import {
 
 import { chartText } from "../../lib/chartText";
 import { tokens } from "../../lib/tokens";
+import { useNarrow } from "../../lib/useNarrow";
 import { KG_ESTIMATE_NOTE, MCID_KG } from "../../lib/clinical";
 import { ChartFrame } from "./ChartFrame";
 
@@ -65,6 +66,13 @@ export function StrengthTrendChart({
 }: StrengthTrendChartProps) {
   const anomalies = data.filter((d) => d.anomaly);
 
+  // The Goal and MCID labels sit outside the plot, so they need a right
+  // margin to land in. At 390px that margin was 52 of roughly 290 usable
+  // pixels, nearly a fifth of the chart given over to two words. Below sm the
+  // labels move inside the plot instead and the margin comes back.
+  const narrow = useNarrow();
+  const labelPosition = narrow ? "insideTopRight" : "right";
+
   return (
     <ChartFrame
       title={title}
@@ -80,9 +88,13 @@ export function StrengthTrendChart({
       height={320}
     >
       <ResponsiveContainer width="100%" height="100%">
-        {/* Right margin leaves room for the goal and MCID labels, which sit
-            outside the plot area and would otherwise be clipped. */}
-        <ComposedChart data={data} margin={{ top: 8, right: 52, bottom: 4, left: 4 }}>
+        {/* The right margin is where the goal and MCID labels land, so without
+            it they would be clipped. Below sm they move inside the plot and
+            the margin is not needed. */}
+        <ComposedChart
+          data={data}
+          margin={{ top: 8, right: narrow ? 8 : 52, bottom: 4, left: 4 }}
+        >
           <CartesianGrid stroke={tokens.squish100} vertical={false} />
           <XAxis dataKey="label" tick={chartText.tick} stroke={tokens.ink} />
           <YAxis
@@ -143,7 +155,7 @@ export function StrengthTrendChart({
               y={goalKg}
               stroke={tokens.good}
               strokeDasharray="4 4"
-              label={{ value: "Goal", ...chartText.label, position: "right" }}
+              label={{ value: "Goal", ...chartText.label, position: labelPosition }}
             />
           ) : null}
 
@@ -153,7 +165,7 @@ export function StrengthTrendChart({
               y={baselineKg + MCID_KG}
               stroke={tokens.squish300}
               strokeDasharray="2 4"
-              label={{ value: "MCID", ...chartText.label, position: "right" }}
+              label={{ value: "MCID", ...chartText.label, position: labelPosition }}
             />
           ) : null}
 

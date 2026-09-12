@@ -63,7 +63,7 @@ export function StatTile({
       title={note}
       className={`relative flex flex-col justify-between gap-2 ${className}`}
     >
-      <p className="text-label text-ink/60">{label}</p>
+      <p className="text-label text-ink/70">{label}</p>
 
       <p
         className={`tabular text-squish-700 ${
@@ -72,7 +72,7 @@ export function StatTile({
       >
         {display}
         {unit ? (
-          <span className="ml-1.5 font-body text-h3 text-ink/50">{unit}</span>
+          <span className="ml-1.5 font-body text-h3 text-ink/70">{unit}</span>
         ) : null}
       </p>
 

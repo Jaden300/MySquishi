@@ -35,7 +35,9 @@ const PAD: Record<Pad, string> = {
   none: "",
   sm: "p-4",
   md: "p-5",
-  lg: "p-7 sm:p-9",
+  // p-5 below sm. p-7 plus the page gutter left hero cards about 300px of
+  // content on a 390px screen.
+  lg: "p-5 sm:p-9",
 };
 
 export function Card({

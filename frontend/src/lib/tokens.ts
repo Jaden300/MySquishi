@@ -8,13 +8,13 @@
 export const tokens = {
   squish50: "#F7F5FE",
   squish100: "#E6E1FA",
-  squish300: "#AC9AF7",
-  squish500: "#7A66DD",
+  squish300: "#9A84F5",
+  squish500: "#6350C4",
   squish700: "#4B3B96",
   ink: "#2A2320",
   mist: "#FFFFFF",
-  alert: "#EF5346",
-  good: "#17A88F",
+  alert: "#E72414",
+  good: "#128572",
 } as const;
 
 /** Maps a token key to the CSS custom property name it mirrors. */

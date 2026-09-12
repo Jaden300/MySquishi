@@ -80,7 +80,22 @@ export function ChartFrame({
         </div>
       </header>
 
-      <div style={{ height }} className="relative">
+      {/*
+        clamp rather than the bare number, so a 340px chart does not eat most
+        of a phone screen. The lower bound is 62 percent of the requested
+        height, reached at about 360px wide and released by 640px, which is the
+        same trick the type scale uses to work at 390px without a responsive
+        variant at every call site. Charts shorter than the floor are
+        unaffected, since the clamp cannot raise them.
+      */}
+      <div
+        style={{
+          height: `clamp(${Math.round(height * 0.62)}px, ${Math.round(
+            height * 0.62,
+          )}px + 14vw, ${height}px)`,
+        }}
+        className="relative"
+      >
         <ChartBody
           loading={loading}
           error={error}

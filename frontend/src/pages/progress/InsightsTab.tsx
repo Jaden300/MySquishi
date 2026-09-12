@@ -8,7 +8,7 @@
  * heading of its own: the card list is the whole of it.
  */
 
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import { api } from "../../lib/api";
 import { useApi } from "../../lib/useApi";
@@ -65,6 +65,9 @@ export function InsightsTab() {
 function InsightCard({ prediction }: { prediction: Prediction }) {
   const [open, setOpen] = useState(false);
   const readout = readoutFor(prediction);
+  // Several of these cards render at once, so the drawer id has to be unique
+  // per card for aria-controls to point anywhere real.
+  const drawerId = useId();
 
   return (
     <Card as="article" watermark="sm">
@@ -110,12 +113,20 @@ function InsightCard({ prediction }: { prediction: Prediction }) {
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
+        aria-controls={drawerId}
         className="mt-4 text-label text-squish-700 underline underline-offset-4"
       >
         Why am I seeing this?
       </button>
 
-      {open ? <WhyThis explanation={prediction.explanation} trainedAt={prediction.trained_at} /> : null}
+      {open ? (
+        <div id={drawerId}>
+          <WhyThis
+            explanation={prediction.explanation}
+            trainedAt={prediction.trained_at}
+          />
+        </div>
+      ) : null}
     </Card>
   );
 }

@@ -40,7 +40,7 @@ export function ModelProvenance({ models }: ModelProvenanceProps) {
           >
             <div className="flex items-baseline justify-between gap-3">
               <span className="text-h3 text-squish-700">{record.model_id}</span>
-              <span className="text-label text-ink/60">{record.metric_name}</span>
+              <span className="text-label text-ink/70">{record.metric_name}</span>
             </div>
 
             <span className="tabular text-stat text-squish-700">
@@ -60,7 +60,7 @@ export function ModelProvenance({ models }: ModelProvenanceProps) {
                   style={{ width: `${Math.max(share * 100, 2)}%` }}
                 />
               </div>
-              <span className="tabular text-label text-ink/60">
+              <span className="tabular text-label text-ink/70">
                 {record.n_training_rows.toLocaleString()} rows
               </span>
             </div>

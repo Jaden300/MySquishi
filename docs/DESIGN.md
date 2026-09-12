@@ -10,17 +10,44 @@ Soft violet, clean, calm, taken from the logo. This is a medical product for som
 |---|---|---|
 | `--squish-50` | `#F7F5FE` | page background |
 | `--squish-100` | `#E6E1FA` | card fills, chart bands, borders |
-| `--squish-300` | `#AC9AF7` | secondary accents, logo gradient top |
-| `--squish-500` | `#7A66DD` | primary action, live signal line, focus ring |
+| `--squish-300` | `#9A84F5` | secondary accents, logo gradient top, the raw trace |
+| `--squish-500` | `#6350C4` | primary action, live signal line, focus ring |
 | `--squish-700` | `#4B3B96` | headings, emphasis, the wordmark |
 | `--ink` | `#2A2320` | body text, a warm near black rather than pure black |
 | `--mist` | `#FFFFFF` | card surfaces |
-| `--alert` | `#EF5346` | fatigue and anomaly warnings only |
-| `--good` | `#17A88F` | goal met, on track |
+| `--alert` | `#E72414` | fatigue and anomaly warnings only |
+| `--good` | `#128572` | goal met, on track |
 
 Use `--alert` sparingly. It should appear maybe twice on a whole screen. When it appears it means something.
 
-`--good` is deliberately darker than the mint in the logo artwork, because it has to hold up as text and as a chart stroke on white, not only as a fill.
+### Why these exact values
+
+Four of them were measured against white, the surface they are read on, and darkened until they cleared AA. The earlier values are worth recording, because every one of them looked fine:
+
+| Token | Was | Measured | Now | Measures |
+|---|---|---|---|---|
+| `--squish-500` | `#7A66DD` | 4.40 | `#6350C4` | 6.04 |
+| `--alert` | `#EF5346` | 3.50 | `#E72414` | 4.51 |
+| `--good` | `#17A88F` | 2.99 | `#128572` | 4.54 |
+| `--squish-300` | `#AC9AF7` | 2.41 | `#9A84F5` | 3.00 |
+
+`--squish-500` is used in both directions, as a fill under white text and as text on white, so one token carried two failures. `--squish-300` draws the raw signal at one pixel wide, which is data rather than decoration, so it is held to the 3.0 floor for graphical objects rather than the 4.5 one for text.
+
+This is enforced rather than described: `src/lib/contrast.test.ts` computes the ratios and fails the build if any of them drops back under its floor. Before that test existed, this section claimed `--good` had been darkened to pass as text, and it had not.
+
+### Text at partial opacity
+
+`text-ink/NN` looks like a shade of the body colour and behaves like a separate token. On white:
+
+| Opacity | Ratio | Use |
+|---|---|---|
+| `/80` | 8.04 | readable |
+| `/70` | 5.75 | readable, the floor |
+| `/60` | 4.19 | decorative or `aria-hidden` only |
+| `/50` | 3.13 | decorative or `aria-hidden` only |
+| `/45`, `/40` | 2.73, 2.39 | decorative or `aria-hidden` only |
+
+**Readable copy stops at `/70`.** Anything lighter is for marks a sighted reader is not meant to read, and those carry `aria-hidden` so a screen reader skips them too. Disabled controls are exempt under WCAG, but still read better at `/70` than below it.
 
 ### Brand tokens
 
@@ -264,6 +291,22 @@ Non-negotiable:
 - `prefers-reduced-motion` respected, Squishi stops animating
 - AA contrast throughout
 - no information conveyed by color alone, so every colored state carries a label or shape as well
+
+### How each one is held
+
+A floor written as a list is a hope. These are the mechanisms behind it.
+
+**390px.** The `clamp()` steps on the type scale mean most of the app needs no responsive variant at all, and every `grid-cols-N` in the codebase already carries one. Two places could not be solved that way. The clinician session log is eight columns needing 46rem, so the four secondary ones drop below `sm` and Status folds into the reps cell rather than disappearing. `ChartFrame` heights `clamp()` down to 62 percent on a narrow screen, because a 340px chart otherwise eats most of a phone. Recharts props cannot read a media query, so `lib/useNarrow.ts` exists for the few values that have to be JavaScript: on `StrengthTrendChart` the Goal and MCID labels move inside the plot below `sm`, returning the 52px right margin that was a fifth of the chart.
+
+**Focus.** One global `:focus-visible` rule, so no component has to remember. It paints a white gap between the ring and the element via `box-shadow`, because the ring is `--squish-500` and so is the fill on the active nav pill, the active tab and every primary button: without the gap, focus is invisible on exactly the controls a keyboard lands on most.
+
+**Getting to the content.** A skip link is the first focusable element in `Layout`, hidden until focused. Without it, reaching the page means tabbing past the wordmark, the demo toggle and four nav links on every route. `Layout.test.tsx` asserts it is the first tab stop and that it points at a `main` that exists.
+
+**Contrast.** `lib/contrast.test.ts`, described above.
+
+**Not by color alone.** The anomaly dots carry "Standout" or "Off pattern" as text, the effort gauge states "On target" or "Below target", and a disabled option in `Select` is struck through as well as dimmed.
+
+Touch targets are 44px: nav pills were about 40.
 
 ## Chart conventions
 

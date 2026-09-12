@@ -76,7 +76,12 @@ export function HardwareTab() {
                 tone={step.critical ? "alert" : "plain"}
                 pad="none"
               >
-                <details open={step.critical}>
+                {/*
+                  defaultOpen, not open. As a React prop, open is controlled:
+                  it would reassert itself on the next render and snap a step
+                  the reader had collapsed back open.
+                */}
+                <details open={step.critical ? true : undefined} className="group">
                   <summary className="flex cursor-pointer list-none items-center gap-4 px-5 py-4">
                     <GlyphTile
                       id={step.glyph}
@@ -91,6 +96,24 @@ export function HardwareTab() {
                     >
                       {i + 1}
                     </span>
+                    {/*
+                      list-none removes the native triangle, which left no
+                      sign at all that these rows opened. This is that sign.
+                    */}
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 16 16"
+                      className="h-4 w-4 shrink-0 text-squish-700 transition-transform group-open:rotate-180"
+                    >
+                      <path
+                        d="M4 6l4 4 4-4"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.75"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
                   </summary>
                   <p className="px-5 pb-5 pl-20 text-body text-ink/80">
                     {step.body}

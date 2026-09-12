@@ -116,11 +116,14 @@ export function TabPanel({
   children: React.ReactNode;
 }) {
   return (
+    // No tabIndex. The ARIA pattern gives a panel one only when it holds
+    // nothing focusable, so a keyboard can still reach the content. Every
+    // panel here holds links and buttons, so a tab stop on the wrapper is one
+    // extra press before any of them, on every tab, with nothing to show.
     <div
       role="tabpanel"
       id={`${name}-panel-${id}`}
       aria-labelledby={`${name}-tab-${id}`}
-      tabIndex={0}
     >
       {children}
     </div>

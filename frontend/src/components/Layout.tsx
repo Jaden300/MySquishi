@@ -46,6 +46,22 @@ export function Layout() {
         whether the page has left the top, and an observer answers that without
         running a handler on every frame of every scroll.
       */}
+      {/*
+        The first thing the keyboard reaches. Without it, getting to the page
+        content means tabbing past the wordmark, the demo toggle and four nav
+        links on every single route.
+
+        Hidden until focused, which is what sr-only plus focus:not-sr-only
+        does: it takes up no space for a mouse user and becomes a real, visible
+        control the moment someone tabs to it.
+      */}
+      <a
+        href="#main"
+        className="sr-only left-4 top-4 z-50 rounded-pill bg-squish-500 px-4 py-2 text-label text-mist focus:not-sr-only focus:absolute"
+      >
+        Skip to content
+      </a>
+
       <div aria-hidden="true" data-header-sentinel className="h-0" />
 
       <header
@@ -76,7 +92,10 @@ export function Layout() {
               <NavLink key={item.to} to={item.to} end={item.end}>
                 {({ isActive }) => (
                   <span
-                    className={`relative inline-flex rounded-pill px-3 py-2 text-label transition-colors sm:px-4 ${
+                    // min-h-11 is 44px, the touch target floor. px-3 py-2 on a
+                    // 16px label came to about 40. px-2 below sm, because four
+                    // pills at px-3 came to 287px of a 390px row.
+                    className={`relative inline-flex min-h-11 items-center rounded-pill px-2 py-2 text-label transition-colors sm:px-4 ${
                       isActive ? "text-mist" : "text-ink/70 hover:text-squish-700"
                     }`}
                   >
@@ -100,7 +119,7 @@ export function Layout() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+      <main id="main" className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
         {/*
           Keyed on the path so a route change crossfades. Deliberately short:
           long enough to register as a transition, short enough that it never
@@ -149,7 +168,7 @@ function DemoToggle() {
       <button
         type="button"
         onClick={() => setDemoMode(true)}
-        className="rounded-pill px-3 py-1.5 text-label text-ink/60 transition-colors hover:text-squish-700"
+        className="rounded-pill px-3 py-1.5 text-label text-ink/70 transition-colors hover:text-squish-700"
         title="Show the seeded demo history again."
       >
         <span aria-hidden="true" className="sm:hidden">
@@ -162,8 +181,12 @@ function DemoToggle() {
   }
 
   return (
+    // Demo mode is on by default, so this is the state of the header on a
+    // first visit, and at 390px it was 84px of a row that only had room for
+    // about 40. The diamond alone carries the state below sm and the Exit
+    // button becomes a cross, which is what pushed the nav off the screen.
     <span
-      className="inline-flex items-center gap-2 rounded-pill border border-squish-300 bg-squish-100 py-1 pl-3 pr-1 text-label text-squish-700"
+      className="inline-flex items-center gap-1 rounded-pill border border-squish-300 bg-squish-100 py-1 pl-2 pr-1 text-label text-squish-700 sm:gap-2 sm:pl-3"
       title="You are looking at seeded demonstration data, not a real person's history."
     >
       <span aria-hidden="true">◇</span>
@@ -172,10 +195,13 @@ function DemoToggle() {
       <button
         type="button"
         onClick={() => setDemoMode(false)}
-        className="rounded-pill bg-mist px-2.5 py-1 text-label text-squish-700 transition-colors hover:bg-squish-50"
+        className="rounded-pill bg-mist px-1.5 py-1 text-label text-squish-700 transition-colors hover:bg-squish-50 sm:px-2.5"
       >
-        Exit
-        <span className="sr-only"> demo data</span>
+        <span aria-hidden="true" className="sm:hidden">
+          ✕
+        </span>
+        <span className="hidden sm:inline">Exit</span>
+        <span className="sr-only">Exit demo data</span>
       </button>
     </span>
   );

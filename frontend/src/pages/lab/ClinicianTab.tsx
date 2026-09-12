@@ -103,20 +103,41 @@ export function ClinicianTab() {
           </div>
         }
       >
+        {/*
+          Eight columns need 46rem, which is 736px inside a 390px phone: a
+          horizontally scrolling table nested in a fixed height card, which is
+          the worst thing on any page here at that width. Rather than build a
+          second card layout that would duplicate every cell, the four
+          secondary columns drop below sm. Date, muscle, grip and reps survive,
+          which is what the log is scanned for; the rest stay one tap away in
+          the session itself, and the full table returns at sm.
+        */}
         <div className="h-full overflow-auto">
-          <table className="w-full min-w-[46rem] text-left text-label">
+          <table className="w-full text-left text-label sm:min-w-[46rem]">
             <thead className="sticky top-0 bg-mist">
-              <tr className="border-b border-squish-100 text-label text-ink/60">
+              <tr className="border-b border-squish-100 text-label text-ink/70">
                 <SortHeader label="Date" k="started_at" sortKey={sortKey} onSort={setSortKey} />
                 <th className="py-2">Muscle</th>
                 <SortHeader label="Grip (kg)" k="strength_kg" sortKey={sortKey} onSort={setSortKey} />
-                <SortHeader label="Mean MVC" k="mean_mvc" sortKey={sortKey} onSort={setSortKey} />
+                <SortHeader
+                  label="Mean MVC"
+                  k="mean_mvc"
+                  sortKey={sortKey}
+                  onSort={setSortKey}
+                  className="hidden sm:table-cell"
+                />
                 <SortHeader label="Reps" k="rep_count" sortKey={sortKey} onSort={setSortKey} />
-                <SortHeader label="SQI" k="sqi_mean" sortKey={sortKey} onSort={setSortKey} />
-                <th className="py-2">
+                <SortHeader
+                  label="SQI"
+                  k="sqi_mean"
+                  sortKey={sortKey}
+                  onSort={setSortKey}
+                  className="hidden sm:table-cell"
+                />
+                <th className="hidden py-2 sm:table-cell">
                   <ClinicalTooltip term="Borg CR10">Borg</ClinicalTooltip>
                 </th>
-                <th className="py-2">Status</th>
+                <th className="hidden py-2 sm:table-cell">Status</th>
               </tr>
             </thead>
             <tbody>
@@ -150,17 +171,27 @@ export function ClinicianTab() {
                       ? (session.strength_kg?.toFixed(1) ?? "-")
                       : "-"}
                   </td>
-                  <td className="tabular py-2.5 text-ink/80">
+                  <td className="tabular hidden py-2.5 text-ink/80 sm:table-cell">
                     {session.mean_mvc?.toFixed(0) ?? "-"}
                   </td>
+                  {/* Status is a column at sm and up. Below that it collapses
+                      into this cell, because whether a session happened at all
+                      is not something to hide on a narrow screen. */}
                   <td className="tabular py-2.5 text-ink/80">
-                    {session.rep_count ?? "-"}
+                    {session.rep_count ?? (
+                      <span className="sm:hidden">Missed</span>
+                    )}
+                    {session.rep_count == null ? (
+                      <span className="hidden sm:inline">-</span>
+                    ) : null}
                   </td>
-                  <td className="tabular py-2.5 text-ink/80">
+                  <td className="tabular hidden py-2.5 text-ink/80 sm:table-cell">
                     {session.sqi_mean?.toFixed(0) ?? "-"}
                   </td>
-                  <td className="tabular py-2.5 text-ink/80">{session.borg ?? "-"}</td>
-                  <td className="py-2.5 text-ink/80">
+                  <td className="tabular hidden py-2.5 text-ink/80 sm:table-cell">
+                    {session.borg ?? "-"}
+                  </td>
+                  <td className="hidden py-2.5 text-ink/80 sm:table-cell">
                     {session.rep_count == null ? "Missed" : "Completed"}
                   </td>
                 </tr>
@@ -178,20 +209,31 @@ function SortHeader({
   k,
   sortKey,
   onSort,
+  className = "",
 }: {
   label: string;
   k: SortKey;
   sortKey: SortKey;
   onSort: (key: SortKey) => void;
+  className?: string;
 }) {
+  const active = sortKey === k;
+
   return (
-    <th className="py-2">
+    // The table always sorts descending, so the column either is the sort or
+    // is not. aria-sort says which, since the underline alone does not reach
+    // a screen reader.
+    <th
+      className={`py-2 ${className}`}
+      aria-sort={active ? "descending" : "none"}
+    >
       <button
         type="button"
         onClick={() => onSort(k)}
-        className={sortKey === k ? "text-squish-700 underline" : "hover:text-squish-700"}
+        className={active ? "text-squish-700 underline" : "hover:text-squish-700"}
       >
         {label}
+        {active ? <span className="sr-only">, sorted descending</span> : null}
       </button>
     </th>
   );

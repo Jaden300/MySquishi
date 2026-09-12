@@ -7,19 +7,32 @@
   tailwind.config.js maps these through var(), and src/lib/tokens.ts mirrors
   the literal hex values for Recharts, which cannot consume var() in every
   prop. A test asserts the two agree.
+
+  The ratios noted below are measured against white, the surface each is read
+  on. AA wants 4.5 for normal text and 3.0 for a graphical object. Four of
+  these were darkened until they cleared that: they measured 4.40, 3.50, 2.99
+  and 2.41, all of which looked fine and none of which passed.
+  src/lib/contrast.test.ts fails the build if any drops back.
 */
 :root {
   --squish-50: #F7F5FE;
   --squish-100: #E6E1FA;
-  --squish-300: #AC9AF7;
-  --squish-500: #7A66DD;
+  /* 3.00 on white, the floor for a graphical object. It draws the raw trace
+     at one pixel wide, which is data and not decoration, so it has to be
+     seen. Still clearly lighter than --squish-500 above it. */
+  --squish-300: #9A84F5;
+  /* 6.04 on white, both as a fill under white text (the primary button, the
+     active nav pill, the active tab) and as text on white. One token, two
+     failures, because it is used in both directions. */
+  --squish-500: #6350C4;
   --squish-700: #4B3B96;
   --ink: #2A2320;
   --mist: #FFFFFF;
-  --alert: #EF5346;
-  /* The pose sheet's sweat teal, darkened so it also passes as text and as a
-     chart stroke on white rather than only as a fill. */
-  --good: #17A88F;
+  /* 4.51 on white. Carries error copy, so it has to hold up as body text. */
+  --alert: #E72414;
+  /* The pose sheet's sweat teal, darkened to 4.54 so it also passes as text
+     and as a chart stroke on white rather than only as a fill. */
+  --good: #128572;
 }
 
 /*
@@ -102,10 +115,19 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* Accessibility floor: focus must always be visible. */
+  /*
+    Accessibility floor: focus must always be visible.
+
+    The ring is violet, and so is the fill on the active nav pill, the active
+    tab and every primary button. A violet outline sitting two pixels off a
+    violet background is invisible on exactly the controls a keyboard user
+    lands on most. The box-shadow paints a white gap between the two, so the
+    ring reads against a filled control and against the page alike.
+  */
   :focus-visible {
     outline: 2px solid var(--squish-500);
     outline-offset: 2px;
+    box-shadow: 0 0 0 2px var(--mist);
     border-radius: 4px;
   }
 

@@ -442,7 +442,7 @@ function GoalCard({
           <span className="tabular text-h1 text-squish-700">
             {goal?.current_kg?.toFixed(1) ?? "-"} kg
           </span>
-          <span className="text-label text-ink/60">
+          <span className="text-label text-ink/70">
             of {goal?.target_kg?.toFixed(1) ?? "-"} kg goal
           </span>
         </div>
@@ -467,9 +467,15 @@ function ProgressRing({ percent }: { percent: number }) {
   const circumference = 2 * Math.PI * radius;
   const filled = (Math.max(0, Math.min(100, percent)) / 100) * circumference;
 
+  // The viewBox does the scaling. A fixed width and height would have pinned
+  // it at 110px however little room the card had.
   return (
-    <svg width="110" height="110" viewBox="0 0 110 110" role="img"
-      aria-label={`${percent.toFixed(0)} percent of the way to your goal`}>
+    <svg
+      viewBox="0 0 110 110"
+      role="img"
+      className="h-[110px] w-[110px] max-w-full"
+      aria-label={`${percent.toFixed(0)} percent of the way to your goal`}
+    >
       <circle cx="55" cy="55" r={radius} fill="none" stroke={tokens.squish100} strokeWidth="10" />
       {/*
         Drawn on with a dashoffset sweep rather than appearing complete. The

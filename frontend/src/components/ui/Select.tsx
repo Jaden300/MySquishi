@@ -224,7 +224,7 @@ export function Select({
         onKeyDown={onKeyDown}
         className="flex w-full items-center justify-between gap-3 rounded-card border border-squish-100 bg-mist px-3.5 py-2.5 text-left text-label text-ink transition-colors hover:border-squish-300 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        <span className={selected ? "" : "text-ink/50"}>
+        <span className={selected ? "" : "text-ink/70"}>
           {selected?.label ?? placeholder}
         </span>
         <Chevron open={open} />
@@ -264,7 +264,7 @@ export function Select({
                   onPointerEnter={() => !option.disabled && setActive(i)}
                   className={`flex cursor-pointer items-center justify-between gap-3 rounded-[10px] px-3 py-2 text-label transition-colors ${
                     option.disabled
-                      ? "cursor-not-allowed text-ink/45"
+                      ? "cursor-not-allowed text-ink/70 line-through"
                       : isSelected
                         ? "text-squish-700"
                         : "text-ink"

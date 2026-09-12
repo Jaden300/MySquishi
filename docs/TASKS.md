@@ -111,14 +111,34 @@ Still open, needs the sensor attached:
 - [ ] Clinician share link (read-only token)
 - [ ] Session replay scrubber
 - [ ] Bilateral comparison
-- [ ] Voice coaching
-- [ ] LLM weekly summary, grounded strictly in computed metrics
+- [x] Voice coaching. Speaks the coach prompts, repetition counts, per
+      repetition feedback and the session summary, all of it copy that is
+      already on the screen. A singleton beside `liveConnection` subscribing to
+      the live store, with a single pending utterance rather than a queue so a
+      prompt interrupts a count instead of queueing behind it. Off by default,
+      with a switch in Settings and another in the session. `lib/speech.ts`
+- [x] LLM weekly summary, grounded strictly in computed metrics. Precomputed,
+      never a live call: the app reads a committed fixture and falls back to a
+      deterministic template composed from the other models' own explanation
+      sentences, so a demo needs no network and no key. Generation is
+      `tools/write_narratives.py`, run by hand, and the clinical gate runs on
+      the finished text rather than being trusted to the model
 - [ ] Squishi grip-driven game mode
 
 ## Extensions (independent, none required)
 
 See §15 of `MySquishi_Plan.md`.
 
-- [ ] Mascot: animated Squishi driven by the live signal, frontend only
-- [ ] AI/ML layer beyond M1-M14, capability to be scoped before building
+- [x] Mascot: animated Squishi driven by the live signal, frontend only. Built
+      in Phase 1 and never reconciled with this line. `SquishiMascot`
+      deforms in proportion to live %MVC, with a discrete four state swap
+      under reduced motion
+- [x] AI/ML layer beyond M1-M14, capability to be scoped before building.
+      Scoped as **M15, the weekly rollup**: sessions bucketed into ISO weeks,
+      which nothing in the stack did before. Quiet weeks are emitted rather
+      than skipped and the partial current week is excluded from every trend.
+      Within a week the interval is the observed spread, across weeks it is a
+      bootstrap, and the kilogram figure narrows to the grip sessions in each
+      week. `app/ml/weekly.py`, `GET /api/ml/weekly/{patient_id}`, leading the
+      insight cards
 - [ ] Camera detector: MediaPipe Hands, 21 landmarks at 30fps, browser only

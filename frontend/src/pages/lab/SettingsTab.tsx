@@ -10,6 +10,7 @@ import { useState } from "react";
 
 import { api } from "../../lib/api";
 import { useApi } from "../../lib/useApi";
+import { speechAvailable, useVoiceStore } from "../../store/voice";
 import { SourceChip } from "../../components/Honesty";
 import { SquishiMark } from "../../components/brand/SquishiMark";
 import { PoseSpot } from "../../components/brand/PoseSpot";
@@ -22,6 +23,8 @@ export function SettingsTab() {
   const health = useApi(() => api.health(), []);
   const calibration = useApi(() => api.getCalibration(PATIENT), []);
   const [deleted, setDeleted] = useState(false);
+  const voiceOn = useVoiceStore((s) => s.voiceOn);
+  const setVoiceOn = useVoiceStore((s) => s.setVoiceOn);
 
   return (
     <div className="flex flex-col gap-10">
@@ -106,6 +109,36 @@ export function SettingsTab() {
             note="R squared of the fit between signal amplitude and force. Closer to one is a better fit."
           />
         </div>
+      </section>
+
+      <section>
+        <SectionHeader
+          title="Voice coaching"
+          note="Speaks the prompts, repetition counts and session summary during a live session."
+        />
+
+        <Card className="flex flex-wrap items-center justify-between gap-4">
+          {speechAvailable() ? (
+            <>
+              <p className="text-body text-ink">
+                Off by default. Nothing is spoken that is not already on the
+                screen, and it can be turned off from the session itself.
+              </p>
+              <Button
+                variant="secondary"
+                onClick={() => setVoiceOn(!voiceOn)}
+                aria-pressed={voiceOn}
+              >
+                {voiceOn ? "Turn voice off" : "Turn voice on"}
+              </Button>
+            </>
+          ) : (
+            <p className="text-body text-ink">
+              This browser has no speech synthesis, so voice coaching is not
+              available here.
+            </p>
+          )}
+        </Card>
       </section>
 
       <section>

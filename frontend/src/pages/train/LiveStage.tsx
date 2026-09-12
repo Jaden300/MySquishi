@@ -25,7 +25,9 @@ import { MuscleSelector } from "../../components/MuscleSelector";
 import { SourceSelector } from "../../components/SourceSelector";
 import { SourceChip } from "../../components/Honesty";
 import { liveConnection } from "../../lib/ws";
+import { voiceCoach } from "../../lib/speech";
 import { useLiveStore } from "../../store/live";
+import { speechAvailable, useVoiceStore } from "../../store/voice";
 import { Button, Card } from "../../components/ui";
 
 export function LiveStage({ onFinished }: { onFinished: (id: number) => void }) {
@@ -43,6 +45,13 @@ export function LiveStage({ onFinished }: { onFinished: (id: number) => void }) 
 
   // Leaving the page must not leave a socket open behind it.
   useEffect(() => () => liveConnection.disconnect(), []);
+
+  // Voice belongs to this page alone: without the teardown the app carries on
+  // talking over the progress dashboard.
+  useEffect(() => {
+    voiceCoach.start();
+    return () => voiceCoach.stop();
+  }, []);
 
   useEffect(() => {
     if (summary?.session_id) onFinished(summary.session_id);
@@ -90,7 +99,12 @@ export function LiveStage({ onFinished }: { onFinished: (id: number) => void }) 
         {idle ? (
           <Button
             size="lg"
-            onClick={() => liveConnection.connect({ junkiness, muscle, source })}
+            onClick={() => {
+              // Browsers drop speech that no user gesture initiated, so the
+              // queue is unlocked here or the first prompt is swallowed.
+              voiceCoach.prime();
+              liveConnection.connect({ junkiness, muscle, source });
+            }}
           >
             Start session
           </Button>
@@ -148,6 +162,7 @@ export function LiveStage({ onFinished }: { onFinished: (id: number) => void }) 
             )}
           </div>
           <CoachPrompt />
+          <VoiceToggle />
           <SignalQualityBadge />
           <p className="tabular text-label text-ink/70">
             {reps.length} {reps.length === 1 ? "repetition" : "repetitions"}
@@ -164,6 +179,38 @@ export function LiveStage({ onFinished }: { onFinished: (id: number) => void }) 
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Turn the spoken coaching on and off, without leaving the session.
+ *
+ * Settings has the same switch, but somebody who wants the app to stop talking
+ * mid contraction is not going to navigate to another page to do it. Hidden
+ * outright where the browser has no speech, rather than offering a control
+ * that does nothing.
+ */
+function VoiceToggle() {
+  const voiceOn = useVoiceStore((s) => s.voiceOn);
+  const setVoiceOn = useVoiceStore((s) => s.setVoiceOn);
+
+  if (!speechAvailable()) return null;
+
+  return (
+    <button
+      type="button"
+      aria-pressed={voiceOn}
+      onClick={() => {
+        // Priming has to happen inside the gesture that turns voice on.
+        if (!voiceOn) voiceCoach.prime();
+        setVoiceOn(!voiceOn);
+      }}
+      className="rounded-pill border border-squish-300 px-3 py-1.5 text-label text-squish-700 transition-colors hover:bg-squish-50"
+      title="Speak the coaching prompts, repetition counts and the session summary."
+    >
+      <span aria-hidden="true">{voiceOn ? "◉" : "◌"}</span>{" "}
+      {voiceOn ? "Voice on" : "Voice off"}
+    </button>
   );
 }
 

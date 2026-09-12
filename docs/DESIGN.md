@@ -282,6 +282,30 @@ The backend seeds a synthetic patient at startup and the frontend reads it under
 
 The control sits in the header, borrows `SyntheticBadge`'s shape and diamond so the two read as one system, and collapses to the diamond alone under `sm`. Both stay: a mixed list still needs the per record badge while demo mode is on.
 
+## Voice
+
+**Voice speaks what is already on the screen, and nothing else.** The coach
+prompts, the repetition feedback and the session summary are all copy that
+exists visually first. Writing a separate script for the spoken version would
+fork the wording, and the two would drift.
+
+**Off by default**, unlike demo mode. An app that starts talking unasked is the
+wrong first impression in a shared room, and browsers block speech before a
+user gesture anyway, so a default of on would look broken on the first load and
+work on the second. There is a switch in Settings and another in the session
+itself, because somebody silencing the app mid contraction will not navigate to
+another page to do it.
+
+**A string that voice speaks must not also go into a new `aria-live` region.**
+A screen reader user with voice on would otherwise hear the announcement and
+the synthesis, interleaved. The coach prompt is a plain element today, which is
+why it is safe to speak; anything added later has to pick one channel.
+
+Speech is an enhancement and fails silently. A browser without
+`speechSynthesis`, a blocked autoplay policy or a throwing `speak()` all leave
+the session working, and the toggle is hidden outright where the API is absent
+rather than offering a control that does nothing.
+
 ## Accessibility floor
 
 Non-negotiable:

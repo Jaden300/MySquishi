@@ -10,13 +10,15 @@
  * unasked is a different category of wrong. Nothing here acquires a camera
  * until somebody presses the button.
  *
- * This is the whole state surface for the camera extension. It is deliberately
- * standalone: nothing else in the app reads this store, no frame reaches the
- * backend, and no value here is written to the database or joined to a
- * session. See lib/handTracker.ts for the deletion procedure.
+ * This is the whole state surface for the camera extension. No frame reaches
+ * the backend, and no value here is written to the database or joined to a
+ * session: the readings below are read by the live session panel and rendered,
+ * never recorded. See lib/handTracker.ts for the deletion procedure.
  */
 
 import { create } from "zustand";
+
+import type { HandReading } from "../lib/handPose";
 
 const STORAGE_KEY = "mysquishi.camera";
 
@@ -61,7 +63,28 @@ interface CameraState {
   landmarks: Landmark[] | null;
   setLandmarks: (landmarks: Landmark[] | null) => void;
 
+  /**
+   * What the hand is doing, derived from the landmarks by the tracker.
+   *
+   * Kept flat and primitive next to the raw array for the reason store/live.ts
+   * gives: landmarks are rewritten sixty times a second, so anything that
+   * subscribes to them re-renders sixty times a second. A panel reading this
+   * field instead re-renders only when the answer actually changes, which
+   * while somebody holds a pose is never. The bail out that makes that true
+   * lives in setHandReading.
+   */
+  handReading: HandReading | null;
+  setHandReading: (reading: HandReading | null) => void;
+
   reset: () => void;
+}
+
+/** True when two readings would render identically, so the write can be skipped. */
+function sameReading(a: HandReading | null, b: HandReading | null): boolean {
+  if (a === null || b === null) return a === b;
+  return (
+    a.gesture === b.gesture && a.fingers === b.fingers && a.open === b.open
+  );
 }
 
 function readStored(): boolean {
@@ -94,7 +117,18 @@ export const useCameraStore = create<CameraState>((set) => ({
   landmarks: null,
   setLandmarks: (landmarks) => set({ landmarks }),
 
-  reset: () => set({ status: "idle", fault: null, landmarks: null }),
+  handReading: null,
+  // Compared before writing rather than after. Zustand notifies every
+  // subscriber on each set() whatever the contents, so a selector cannot bail
+  // out on a value that was republished unchanged: the skip has to happen
+  // here, at the write.
+  setHandReading: (reading) =>
+    set((state) =>
+      sameReading(state.handReading, reading) ? state : { handReading: reading },
+    ),
+
+  reset: () =>
+    set({ status: "idle", fault: null, landmarks: null, handReading: null }),
 }));
 
 /**

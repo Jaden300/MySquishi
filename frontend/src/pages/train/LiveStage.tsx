@@ -21,6 +21,8 @@ import {
 } from "../../components/charts/LiveCharts";
 import { SquishiMascot } from "../../components/SquishiMascot";
 import { PoseSpot } from "../../components/brand/PoseSpot";
+import { HandPanel } from "./HandPanel";
+import { handTracker } from "../../lib/handTracker";
 import { MuscleSelector } from "../../components/MuscleSelector";
 import { SourceSelector } from "../../components/SourceSelector";
 import { SourceChip } from "../../components/Honesty";
@@ -52,6 +54,14 @@ export function LiveStage({ onFinished }: { onFinished: (id: number) => void }) 
     voiceCoach.start();
     return () => voiceCoach.stop();
   }, []);
+
+  // The camera belongs to this page while it is open, exactly as it belongs to
+  // the Lab tab while that is open. Without the teardown the indicator light
+  // stays on after the session is over, which is the most alarming thing the
+  // camera could do. Deliberately not tied to the session ending: somebody
+  // reading the summary has not left yet, and killing the preview the instant
+  // the last repetition lands looks like a crash.
+  useEffect(() => () => handTracker.stop(), []);
 
   useEffect(() => {
     if (summary?.session_id) onFinished(summary.session_id);
@@ -163,6 +173,7 @@ export function LiveStage({ onFinished }: { onFinished: (id: number) => void }) 
           </div>
           <CoachPrompt />
           <VoiceToggle />
+          <HandPanel />
           <SignalQualityBadge />
           <p className="tabular text-label text-ink/70">
             {reps.length} {reps.length === 1 ? "repetition" : "repetitions"}

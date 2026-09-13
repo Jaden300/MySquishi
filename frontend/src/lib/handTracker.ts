@@ -1,10 +1,13 @@
 /**
  * Hand landmark tracking, in the browser and nowhere else.
  *
- * TO REMOVE THIS FEATURE ENTIRELY: delete this file, src/store/camera.ts,
- * src/pages/lab/CameraTab.tsx and their three test files, then remove the
- * three lines mentioning "camera" from src/pages/LabPage.tsx. Nothing else
- * imports any of it. There is no backend, no database column, no dependency in
+ * TO REMOVE THIS FEATURE ENTIRELY: delete this file, src/lib/handPose.ts,
+ * src/store/camera.ts, src/components/HandStage.tsx,
+ * src/pages/lab/CameraTab.tsx, src/pages/train/HandPanel.tsx and their test
+ * files, then remove the three lines mentioning "camera" from
+ * src/pages/LabPage.tsx and the two mentioning HandPanel from
+ * src/pages/train/LiveStage.tsx, along with the handTracker.stop() teardown
+ * there. There is no backend, no database column, no dependency in
  * package.json and no build configuration to back out.
  *
  * A module level singleton rather than a component, the same shape and for the
@@ -29,6 +32,7 @@ import {
   type CameraFault,
   type Landmark,
 } from "../store/camera";
+import { GestureSmoother, readHand } from "./handPose";
 
 /**
  * Pinned exactly, never a range.
@@ -59,40 +63,15 @@ export const HAND_CONNECTIONS: ReadonlyArray<readonly [number, number]> = [
   [0, 17],
 ];
 
-const THUMB_TIP = 4;
-const INDEX_TIP = 8;
-const WRIST = 0;
-const MIDDLE_BASE = 9;
-
 /**
- * How far apart the thumb and index finger are, scaled by the size of the hand
- * itself so that moving toward or away from the lens does not change it.
+ * The pose measures live in handPose.ts and are re-exported here.
  *
- * Deliberately called aperture and never "grip". This app defines grip against
- * a Jamar dynamometer in kilograms; a camera measures the distance between two
- * points and knows nothing about force. Naming this one grip would be the
- * decorative fake jargon docs/CLINICAL.md exists to forbid.
+ * They moved so the dependency runs one way: this file reads the geometry,
+ * and the geometry knows nothing about cameras. A cycle between the two broke
+ * on module evaluation order, because constructing the singleton below reached
+ * for a class the half evaluated other module had not defined yet.
  */
-export function aperture(landmarks: Landmark[]): number | null {
-  const thumb = landmarks[THUMB_TIP];
-  const index = landmarks[INDEX_TIP];
-  const wrist = landmarks[WRIST];
-  const middle = landmarks[MIDDLE_BASE];
-  if (!thumb || !index || !wrist || !middle) return null;
-
-  const span = Math.hypot(middle.x - wrist.x, middle.y - wrist.y);
-  if (span < 1e-6) return null;
-
-  const gap = Math.hypot(thumb.x - index.x, thumb.y - index.y);
-  return gap / span;
-}
-
-/** Where an open hand stops and a closed one starts, as a multiple of span. */
-const OPEN_THRESHOLD = 0.75;
-
-export function isOpen(value: number): boolean {
-  return value >= OPEN_THRESHOLD;
-}
+export { aperture, isOpen } from "./handPose";
 
 /** Maps a getUserMedia rejection onto copy the panel can show. */
 function faultFromMediaError(error: unknown): CameraFault {
@@ -137,6 +116,12 @@ class HandTracker {
   private starting = false;
   private lastTimestamp = -1;
   private onVisibility: (() => void) | null = null;
+  /**
+   * Owned here because a smoothed gesture is a property of the stream rather
+   * than of any view. Two panels keeping their own history would disagree
+   * about the current pose.
+   */
+  private readonly smoother = new GestureSmoother();
 
   /**
    * Acquire the camera, load the model and begin detecting. Safe to call
@@ -242,6 +227,7 @@ class HandTracker {
     }
 
     this.lastTimestamp = -1;
+    this.smoother.reset();
     useCameraStore.getState().reset();
   }
 
@@ -342,7 +328,22 @@ class HandTracker {
         this.lastTimestamp = timestamp;
         const result = this.landmarker.detectForVideo(this.video, timestamp);
         const hand = result?.landmarks?.[0] ?? null;
-        useCameraStore.getState().setLandmarks(hand);
+
+        const store = useCameraStore.getState();
+        store.setLandmarks(hand);
+
+        // Derived here, at the one place that already runs per frame and
+        // already holds the landmarks. Publishing a small flat reading rather
+        // than making every panel recompute from the raw array is what keeps
+        // the session's re-render count down. See store/camera.ts.
+        const reading = hand ? readHand(hand) : null;
+        store.setHandReading(
+          reading
+            ? { ...reading, gesture: this.smoother.push(reading.gesture) }
+            : null,
+        );
+
+        if (!reading) this.smoother.reset();
       }
     } catch {
       /* One bad frame is not worth ending the session over, and a throw here

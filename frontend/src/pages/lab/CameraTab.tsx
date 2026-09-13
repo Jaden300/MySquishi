@@ -1,17 +1,16 @@
 /**
  * Camera: hand landmarks in the browser, on their own.
  *
- * TO REMOVE THIS FEATURE ENTIRELY: delete this file, src/lib/handTracker.ts,
- * src/store/camera.ts and their three test files, then remove the three lines
- * mentioning "camera" from src/pages/LabPage.tsx. Nothing else imports any of
- * it. No backend, no database, no dependency in package.json, no build config.
+ * TO REMOVE THIS FEATURE ENTIRELY: see the procedure at the top of
+ * src/lib/handTracker.ts, which lists every file and line.
  *
  * What this is, and just as importantly what it is not. It previews the
  * webcam, draws MediaPipe's 21 hand landmarks over it and says whether the
  * hand reads as open or closed. It writes nothing to a session, sends no frame
- * anywhere and produces no clinical figure. The sEMG signal measures effort
- * and this measures motion; pairing the two is the interesting part and it is
- * deliberately not built here.
+ * anywhere and produces no clinical figure. The live session shows the same
+ * readings beside the effort trace, but the two signals are only ever
+ * displayed together: nothing fuses them, and no camera value reaches the
+ * backend or the database.
  *
  * The clinical rule that governs this file: a camera measures the distance
  * between points, so nothing here may print kilograms, a percentile, EWGSOP2,
@@ -21,19 +20,14 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import {
-  aperture,
-  handTracker,
-  HAND_CONNECTIONS,
-  isOpen,
-} from "../../lib/handTracker";
-import { tokens } from "../../lib/tokens";
+import { aperture, handTracker, isOpen } from "../../lib/handTracker";
 import {
   cameraAvailable,
   unavailableFault,
   useCameraStore,
   type CameraFault,
 } from "../../store/camera";
+import { HandStage } from "../../components/HandStage";
 import { Button, Card, SectionHeader } from "../../components/ui";
 
 /**
@@ -131,7 +125,7 @@ export function CameraTab() {
             </Button>
           </div>
 
-          <Stage videoRef={videoRef} landmarks={landmarks} />
+          <HandStage videoRef={videoRef} />
 
           {status === "error" && fault ? (
             <Card tone="alert">
@@ -220,76 +214,5 @@ function Aperture({ value }: { value: number | null }) {
   );
 }
 
-/**
- * The video and its overlay, in one square that scales down to a phone.
- *
- * The canvas is redrawn from the store rather than inside the detect loop, so
- * a rendering fault stays inside React where the tab's ErrorBoundary can catch
- * it instead of escaping into an animation callback.
- */
-function Stage({
-  videoRef,
-  landmarks,
-}: {
-  videoRef: React.RefObject<HTMLVideoElement | null>;
-  landmarks: { x: number; y: number }[] | null;
-}) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const context = canvas.getContext("2d");
-    if (!context) return;
-
-    const { width, height } = canvas;
-    context.clearRect(0, 0, width, height);
-    if (!landmarks) return;
-
-    // squish300 is already held above the three to one contrast floor that
-    // applies to graphical objects, because it is the colour the raw signal
-    // trace is drawn in. See lib/contrast.test.ts.
-    context.strokeStyle = tokens.squish300;
-    context.fillStyle = tokens.squish500;
-    context.lineWidth = 2;
-
-    for (const [from, to] of HAND_CONNECTIONS) {
-      const a = landmarks[from];
-      const b = landmarks[to];
-      if (!a || !b) continue;
-      context.beginPath();
-      context.moveTo(a.x * width, a.y * height);
-      context.lineTo(b.x * width, b.y * height);
-      context.stroke();
-    }
-
-    for (const point of landmarks) {
-      context.beginPath();
-      context.arc(point.x * width, point.y * height, 4, 0, Math.PI * 2);
-      context.fill();
-    }
-  }, [landmarks]);
-
-  return (
-    <Card pad="none" className="overflow-hidden">
-      <div className="relative aspect-[4/3] w-full bg-ink/5">
-        {/* Mirrored, because an unmirrored preview of yourself is disorienting
-            in a way that makes people think the tracking is wrong. */}
-        <video
-          ref={videoRef}
-          playsInline
-          muted
-          className="h-full w-full -scale-x-100 object-cover"
-        />
-        <canvas
-          ref={canvasRef}
-          width={640}
-          height={480}
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 h-full w-full -scale-x-100"
-        />
-      </div>
-    </Card>
-  );
-}
+/* The preview and its overlay live in components/HandStage.tsx, shared with
+   the live session so there is one copy of the drawing. */

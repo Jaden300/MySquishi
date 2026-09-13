@@ -142,14 +142,19 @@ See §15 of `MySquishi_Plan.md`.
       week. `app/ml/weekly.py`, `GET /api/ml/weekly/{patient_id}`, leading the
       insight cards
 - [x] Camera detector: MediaPipe Hands, 21 landmarks at 30fps, browser only.
-      The Camera tab of `/lab`: a webcam preview with the landmarks drawn over
-      it and an open or closed reading, scaled by the width of the hand so
-      moving nearer the lens does not change it. Built deliberately isolated,
-      since it is the one feature most likely to be pulled: five files plus
-      three lines in `LabPage.tsx`, no backend, no database, no dependency in
+      The Camera tab of `/lab` and an opt-in panel in the live session: a
+      webcam preview with the landmarks drawn over it, an open or closed
+      reading, a count of extended fingers and a named gesture, all scaled by
+      the width of the hand so moving nearer the lens does not change it. The
+      geometry is pure and lives in `lib/handPose.ts`, so it tests with hand
+      written arrays and never reaches for a camera. Built deliberately
+      isolated, since it is the one feature most likely to be pulled: the
+      removal procedure at the top of `lib/handTracker.ts` names every file
+      and line, and there is no backend, no database and no dependency in
       `package.json`. MediaPipe is fetched from a CDN by dynamic import at
       first use rather than installed, so the bundle is untouched for anyone
-      who never opens the tab. Standalone by choice. It writes nothing to a
-      session and prints no clinical figure: a camera measures motion where
-      the sEMG measures effort, and pairing the two is a separate increment.
+      who never turns it on. The two signals are displayed side by side and
+      never fused: a camera measures motion where the sEMG measures effort,
+      so no camera value joins a session, reaches the backend or is written to
+      the database, and nothing here prints a clinical figure.
       `lib/handTracker.ts`

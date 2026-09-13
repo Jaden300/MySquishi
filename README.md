@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/images/logo-banner.svg" alt="MySquishi" width="100%">
+</p>
+
 # MySquishi
 
 A grip strength rehabilitation companion built around a surface EMG sensor. It
@@ -7,7 +11,7 @@ a patient how they are progressing over weeks.
 
 **The whole app runs with no hardware attached.** Simulation is a permanent
 feature rather than a fallback: the full session flow, every chart and all
-fourteen models work against a synthetic signal generator. Plugging a sensor in
+fifteen models work against a synthetic signal generator. Plugging a sensor in
 adds real measurements; it is never a prerequisite.
 
 > Not a medical device. Nothing here diagnoses, treats or screens for any
@@ -111,7 +115,7 @@ flowchart TD
     UI <-->|"WebSocket: live stream at 5 frames/sec"| API
 
     API --- R1["/signal&nbsp;&nbsp;ingestion, filtering, features"]
-    API --- R2["/ml&nbsp;&nbsp;M1 to M14 inference"]
+    API --- R2["/ml&nbsp;&nbsp;M1 to M15 inference"]
     API --- R3["/sessions&nbsp;&nbsp;CRUD and aggregation"]
     API --- R4["/export&nbsp;&nbsp;CSV and PDF"]
 
@@ -177,8 +181,8 @@ cd backend && .venv/bin/pip install -r requirements-dev.txt
 ```
 
 ```bash
-cd backend  && .venv/bin/python -m pytest    # 429 tests
-cd frontend && npm run test && npm run build # 121 tests
+cd backend  && .venv/bin/python -m pytest    # 474 tests
+cd frontend && npm run test && npm run build # 220 tests
 ```
 
 Two of those are worth knowing about, because they encode rules rather than
@@ -257,11 +261,18 @@ are in [docs/HARDWARE_CHECKLIST.md](docs/HARDWARE_CHECKLIST.md).
 
 ## The models
 
-Fourteen, M1 to M14: signal quality, force regression, repetition quality,
-spectral fatigue, anomaly detection, perceived exertion, prescription, forecast,
-time to goal, plateau detection, archetype clustering, adherence, and cohort
-percentile. Each ships with an explanation of what drove it, and reports when it
-has fallen back to a documented heuristic rather than a trained artifact.
+Fifteen, M1 to M15: signal quality, repetition segmentation, force regression,
+repetition quality, spectral fatigue, anomaly detection, perceived exertion,
+prescription, forecast, time to goal, plateau detection, archetype clustering,
+adherence, cohort percentile, and a weekly rollup. Each ships with an
+explanation of what drove it, and reports when it has fallen back to a
+documented heuristic rather than a trained artifact.
+
+The forecast is the centerpiece. Three candidates are fitted to the patient's
+history, a linear trend, an exponential plateau and a Gaussian process, and the
+winner is chosen by expanding window time series cross validation. Shuffled
+cross validation leaks the future into the past and flatters the linear model,
+so it is never used here.
 
 Inputs, outputs and fit timing are in [docs/ML.md](docs/ML.md).
 
@@ -274,7 +285,7 @@ Inputs, outputs and fit timing are in [docs/ML.md](docs/ML.md).
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design, the SignalSource boundary, the clinical gate |
 | [DESIGN.md](docs/DESIGN.md) | Palette, typography, mascot, copy voice, accessibility floor |
 | [CLINICAL.md](docs/CLINICAL.md) | Clinical terminology reference |
-| [ML.md](docs/ML.md) | The M1 to M14 stack |
+| [ML.md](docs/ML.md) | The M1 to M15 stack |
 | [HARDWARE_CHECKLIST.md](docs/HARDWARE_CHECKLIST.md) | Wiring, placement, bring up protocol |
 | [HARDWARE_FINDINGS.md](docs/HARDWARE_FINDINGS.md) | What the rig measured, and what that rules out |
 | [PHASE3_GUIDE.md](docs/PHASE3_GUIDE.md) | How the hardware layer was built |

@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" width="1200" height="300" role="img" aria-label="MySquishi">
+  <title>MySquishi</title>
+
+  <!--
+    The README banner.
+
+    GitHub sanitizes embedded SVG and resolves no CSS custom properties, so the
+    palette is inlined as literal hex rather than referencing the token names
+    the app uses. The values are copied from docs/DESIGN.md and the silhouette
+    and face coordinates from src/components/brand/poses.ts, so the banner is
+    the same character rather than a redrawing of it.
+
+    The lettering is live text in a generic stack rather than converted paths.
+    The app's display face is not installed on github.com, so any font-family
+    naming it would fall back regardless; a stack that names its fallbacks at
+    least falls back predictably. Sizes are set so the longest line clears the
+    right edge under the widest of them.
+  -->
+
+  <defs>
+    <linearGradient id="ground" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#AC9AF7" />
+      <stop offset="1" stop-color="#7A66DD" />
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="300" rx="40" fill="url(#ground)" />
+
+  <!-- Squishi, from the pose library's shared body path and idle face.
+       The 200x200 pose box is translated and scaled into the banner. -->
+  <g transform="translate(120 66) scale(0.84)">
+    <g fill="none" stroke="#FFB6A6" stroke-width="11" stroke-linecap="round">
+      <path d="M68,122 Q48,132 38,146" />
+      <path d="M132,122 Q152,132 162,146" />
+    </g>
+    <path
+      d="M100,53 C142,53 162,77 162,103 C162,132 138,148 100,148 C62,148 38,132 38,103 C38,77 58,53 100,53 Z"
+      fill="#FFB6A6"
+    />
+    <circle cx="85" cy="98" r="7" fill="#4B3B96" />
+    <circle cx="115" cy="98" r="7" fill="#4B3B96" />
+    <path
+      d="M89,118 Q100,128 111,118"
+      fill="none"
+      stroke="#4B3B96"
+      stroke-width="5.5"
+      stroke-linecap="round"
+    />
+  </g>
+
+  <text
+    x="330"
+    y="140"
+    font-family="Georgia, 'Times New Roman', serif"
+    font-size="96"
+    font-weight="600"
+    letter-spacing="-2"
+    fill="#FFFFFF"
+  >MySquishi</text>
+
+  <text
+    x="332"
+    y="196"
+    font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif"
+    font-size="30"
+    fill="#E6E1FA"
+  >Grip strength rehabilitation, measured rather than guessed</text>
+
+  <!-- A quiet EMG trace, decoration that happens to be the product. -->
+  <path
+    d="M332,242 L392,242 L404,232 L416,252 L428,236 L440,246 L452,242 L520,242 L534,214 L548,266 L562,226 L576,252 L590,242 L660,242 L672,234 L684,250 L696,238 L708,244 L720,242 L800,242 L814,208 L828,270 L842,222 L856,254 L870,242 L1080,242"
+    fill="none"
+    stroke="#FFFFFF"
+    stroke-opacity="0.55"
+    stroke-width="4"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>

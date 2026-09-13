@@ -49,6 +49,14 @@ BUFFER_SECONDS = 10.0
 # Resting window used to fix the segmentation baseline, in seconds.
 BASELINE_SECONDS = 2.0
 
+# How far above the session's quietest quartile an opening baseline may sit
+# before it is disbelieved. A session that starts mid contraction measures
+# "rest" on a contraction, which puts mu + 3*sigma above everything that
+# follows and detects nothing at all for the whole session. 1.5x is well
+# outside ordinary baseline variation and well inside the gap between rest
+# and real effort.
+BASELINE_CONTAMINATION_RATIO = 1.5
+
 # Envelope points per frame. One per 10 ms at a 200 ms window.
 ENVELOPE_POINTS = 20
 
@@ -67,6 +75,7 @@ FRAME_KEYS: tuple[str, ...] = (
     "raw",
     "envelope",
     "mvc_pct",
+    "window_rms",
     "sqi",
     "is_live",
     "source_id",
@@ -186,6 +195,7 @@ class LiveSessionRunner:
     samples_dropped: int = 0
 
     baseline: tuple[float, float] | None = None
+    baseline_provisional: bool = True
     last_rep_end_abs: int = -1
 
     reps: list[dict[str, object]] = field(default_factory=list)
@@ -297,6 +307,11 @@ class LiveSessionRunner:
             "raw": _decimate(window, settings.frame_raw_points),
             "envelope": _decimate(window_env, ENVELOPE_POINTS),
             "mvc_pct": round(mvc_pct, 2),
+            # The unnormalized amplitude of this window. Carried so calibration
+            # can anchor on a measured maximum instead of assuming one: percent
+            # MVC is already divided by the reference, so it cannot be used to
+            # derive a new reference. See CalibrateStage.tsx.
+            "window_rms": round(window_rms, 6),
             "sqi": round(sqi_value, 1),
             "is_live": self.is_live,
             "source_id": self.source_id,
@@ -317,15 +332,60 @@ class LiveSessionRunner:
             self.samples_dropped += excess
 
     def _freeze_baseline(self, envelope: np.ndarray, fs: int) -> None:
-        """Fix the resting statistics once, from the opening rest window."""
-        if self.baseline is not None:
-            return
+        """Fix the resting statistics from the opening rest window.
+
+        Frozen rather than rolling, for the reason in the module docstring:
+        re-estimating every frame lets the thresholds drift up as the patient
+        works, and repetitions quietly stop being detected.
+
+        But the opening window is only rest if the patient was actually
+        resting. Start a session already gripping and "rest" is measured on a
+        contraction, mu + 3*sigma lands above everything that follows, and not
+        one repetition is detected for the entire session. That is silent: the
+        trace looks normal and the rep count simply stays at zero.
+
+        So the first estimate is provisional. Once enough of the session has
+        been seen to know what quiet actually looks like, an opening window
+        sitting far above the quietest quartile is disbelieved and replaced.
+        After that the baseline is final and never moves again.
+        """
+        from app.signal.segmentation import estimate_baseline
+
         if envelope.size < int(BASELINE_SECONDS * fs):
             return
 
-        from app.signal.segmentation import estimate_baseline
+        if self.baseline is None:
+            self.baseline = estimate_baseline(envelope, fs, BASELINE_SECONDS)
+            return
 
-        self.baseline = estimate_baseline(envelope, fs, BASELINE_SECONDS)
+        if not self.baseline_provisional:
+            return
+
+        # Wait for enough history that the quietest quartile means something
+        # rather than describing the same opening contraction.
+        if envelope.size < int(2 * BASELINE_SECONDS * fs):
+            return
+
+        self.baseline_provisional = False
+
+        quiet = envelope[envelope <= np.percentile(envelope, 25)]
+        if quiet.size < 8:
+            return
+
+        opening_mean = self.baseline[0]
+        quiet_mean = float(quiet.mean())
+        if opening_mean <= quiet_mean * BASELINE_CONTAMINATION_RATIO:
+            return
+
+        # The opening window was not rest. Re-estimate from the quiet samples
+        # and reset detection state, since any repetition found against the
+        # contaminated thresholds was measured against the wrong floor.
+        quiet_sd = float(quiet.std())
+        if quiet_sd <= 1e-12:
+            quiet_sd = max(float(envelope.std()) * 0.01, 1e-9)
+
+        self.baseline = (quiet_mean, quiet_sd)
+        self.last_rep_end_abs = -1
 
     def _detect_rep(
         self,

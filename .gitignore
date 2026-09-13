@@ -55,3 +55,6 @@ Thumbs.db
 
 # --- Claude Code local settings ---
 .claude/settings.local.json
+
+# --- Demo recording script, personal notes ---
+docs/DEMO_SCRIPT.md

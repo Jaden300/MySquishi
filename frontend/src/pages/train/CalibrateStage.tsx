@@ -23,6 +23,7 @@ import { liveConnection } from "../../lib/ws";
 import { SquishiMascot } from "../../components/SquishiMascot";
 import { KG_ESTIMATE_NOTE } from "../../lib/clinical";
 import { NON_GRIP_NOTE, allowsKilograms, muscleLabel } from "../../lib/muscle";
+import { referenceRmsFor } from "../../lib/reference";
 import { Button } from "../../components/ui";
 
 type Step = "intro" | "maximum" | "rest" | "reference" | "done";
@@ -48,8 +49,18 @@ export function CalibrateStage({ onDone }: { onDone: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // What each trial peaked at. The highest becomes the reference.
+  // What each trial peaked at, in raw amplitude. The highest becomes the
+  // reference. Raw rather than percent, because percent MVC is already divided
+  // by the existing reference: calibrating from it would anchor each
+  // calibration on the previous one and never converge on what the person
+  // actually produces.
   const [trials, setTrials] = useState<number[]>([]);
+
+  // The same trials in percent, kept only so the screen has something
+  // meaningful to show. A raw amplitude is about 0.75 on the simulated source
+  // and 0.12 on the sensor, so rendering one as "percent" prints "0 percent".
+  const [trialsPct, setTrialsPct] = useState<number[]>([]);
+
   const [restRemaining, setRestRemaining] = useState(REST_SECONDS);
 
   useEffect(() => () => liveConnection.disconnect(), []);
@@ -57,7 +68,15 @@ export function CalibrateStage({ onDone }: { onDone: () => void }) {
   // The strongest effort of the current trial. Accumulated in the store as
   // frames arrive, so this page only reads it.
   const peak = useLiveStore((s) => s.peakMvcPct);
-  const best = trials.length ? Math.max(...trials) : 0;
+
+  // Which source the frames are coming from, so the fallback reference matches
+  // the amplitude regime the trials were measured in. It arrives on every
+  // frame rather than being chosen here: this stage always connects with the
+  // default, and the backend is what decides.
+  const sourceId = useLiveStore((s) => s.sourceId);
+
+  // Shown to the person, so this is the percent series rather than the raw one.
+  const best = trialsPct.length ? Math.max(...trialsPct) : 0;
 
   // Kilograms are validated on hand dynamometry, so the reference step only
   // makes sense for grip. Every other muscle calibrates straight to percent
@@ -97,7 +116,20 @@ export function CalibrateStage({ onDone }: { onDone: () => void }) {
     // The trial produces amplitude features at a spread of effort levels,
     // anchored on the strongest of the three attempts.
     const fractions = [0.3, 0.45, 0.6, 0.75, 0.9, 1.0];
-    const mvcReferenceRms = 0.9;
+
+    // The measured maximum, which is the whole point of the three trials. This
+    // was a hardcoded 0.9 and every session normalized against that constant
+    // instead of against the person: a sensor whose real peak sits an order of
+    // magnitude below it reported a maximal squeeze as single digit percent,
+    // and the coach never advanced past "when you are ready, squeeze" because
+    // its threshold is 8 percent.
+    //
+    // Floored per source rather than trusted blindly. A spoiled run
+    // (electrodes off, the session stopped before a contraction) would
+    // otherwise store a reference near zero and every later session would
+    // divide by it and clamp at 150 percent. See lib/reference.ts for why the
+    // floor cannot be one constant.
+    const mvcReferenceRms = referenceRmsFor(sourceId, Math.max(...trials, 0));
 
     const result = await api.calibrate({
       patient_id: "demo",
@@ -119,14 +151,24 @@ export function CalibrateStage({ onDone }: { onDone: () => void }) {
     } else {
       setError(result.error);
     }
-  }, [muscle, referenceKg, wantsKilograms]);
+  }, [muscle, referenceKg, wantsKilograms, trials, sourceId]);
 
   function finishTrial() {
+    // Read the peaks straight from the store, before the socket is touched.
+    // liveConnection.connect() calls store.reset(), which zeroes both peaks, so
+    // a value captured any later than this belongs to the next trial rather
+    // than the one just finished. A trial recorded as zero drags the reference
+    // down to the fallback floor, and on a source whose real peak sits well
+    // above that floor every later session clips at the ceiling and stops
+    // counting repetitions.
+    const { peakWindowRms, peakMvcPct } = useLiveStore.getState();
+
     liveConnection.stop();
     liveConnection.disconnect();
 
-    const recorded = [...trials, peak];
+    const recorded = [...trials, peakWindowRms];
     setTrials(recorded);
+    setTrialsPct([...trialsPct, peakMvcPct]);
 
     if (recorded.length >= TRIALS) {
       // A non grip muscle has no kilogram anchor to ask for, so it calibrates

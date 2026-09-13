@@ -38,6 +38,14 @@ interface LiveState {
    */
   peakMvcPct: number;
 
+  /**
+   * The strongest raw amplitude seen this connection, in the same units the
+   * backend computes percent MVC from. This is what calibration stores as the
+   * reference: peakMvcPct is already relative to the old reference, so reusing
+   * it would anchor a new calibration on the previous one.
+   */
+  peakWindowRms: number;
+
   sqi: number;
   isLive: boolean;
   sourceId: string;
@@ -72,6 +80,7 @@ const initial = {
   mvcPct: 0,
   repCompletedAt: 0,
   peakMvcPct: 0,
+  peakWindowRms: 0,
   sqi: 100,
   isLive: false,
   sourceId: "simulated",
@@ -103,6 +112,7 @@ export const useLiveStore = create<LiveState>((set) => ({
       return {
         mvcPct: frame.mvc_pct,
         peakMvcPct: Math.max(state.peakMvcPct, frame.mvc_pct),
+        peakWindowRms: Math.max(state.peakWindowRms, frame.window_rms ?? 0),
         sqi: frame.sqi,
         isLive: frame.is_live,
         sourceId: frame.source_id,

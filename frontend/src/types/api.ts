@@ -202,6 +202,12 @@ export interface Frame {
   envelope: number[];
   /** Computed server side. The frontend never divides. */
   mvc_pct: number;
+  /**
+   * Raw amplitude of this window, before any normalization. Calibration reads
+   * it to anchor on a measured maximum: mvc_pct is already divided by the
+   * reference, so it cannot produce a new one.
+   */
+  window_rms: number;
   sqi: number;
   is_live: boolean;
   source_id: string;
@@ -264,6 +270,7 @@ export const FRAME_KEYS = [
   "raw",
   "envelope",
   "mvc_pct",
+  "window_rms",
   "sqi",
   "is_live",
   "source_id",

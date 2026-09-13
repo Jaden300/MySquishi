@@ -21,7 +21,7 @@
  * written to the database.
  */
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { HandStage } from "../../components/HandStage";
 import { Card } from "../../components/ui";
@@ -65,6 +65,23 @@ export function HandPanel() {
   const fingers = useCameraStore((s) => s.handReading?.fingers ?? null);
   const open = useCameraStore((s) => s.handReading?.open ?? false);
 
+  // Started here rather than in the click, because the video element the
+  // tracker needs does not exist at the moment of the press: the preview is
+  // only rendered once `on` is true, so `videoRef.current` is still null
+  // inside the handler and the start was silently skipped. The panel then
+  // said "Camera on" over an empty box with nothing running behind it.
+  //
+  // By the time an effect runs the re-render has happened and the element is
+  // mounted. Keyed on `requested` alone, so this fires on the press and not
+  // on the sixty status changes a second that follow it.
+  //
+  // Above the availability check below, because a hook after an early return
+  // is called conditionally and breaks the order React relies on.
+  useEffect(() => {
+    if (!requested) return;
+    if (videoRef.current) handTracker.start(videoRef.current);
+  }, [requested]);
+
   // A browser that cannot do this gets no control rather than a dead one, the
   // same way the voice toggle hides itself where there is no speech.
   if (!cameraAvailable()) return null;
@@ -79,7 +96,6 @@ export function HandPanel() {
       return;
     }
     setRequested(true);
-    if (videoRef.current) handTracker.start(videoRef.current);
   };
 
   return (

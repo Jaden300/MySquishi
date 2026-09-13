@@ -41,6 +41,6 @@ services:
       # Matches the local interpreter, and scikit-learn and scipy publish 3.13
       # wheels, so the build resolves binaries rather than compiling from source.
       - key: PYTHON_VERSION
-        value: "3.13.4"
+        value: "3.13.5"
       - key: PIP_DISABLE_PIP_VERSION_CHECK
         value: "1"

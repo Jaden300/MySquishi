@@ -1,17 +1,21 @@
-fastapi
-uvicorn[standard]
-sqlmodel
-numpy
-scipy
-scikit-learn
-pandas
-joblib
-pydantic-settings
-websockets
-reportlab
+# Pinned to the versions the tracked models in data/models/ were fitted and
+# pickled under. joblib loading a scikit-learn estimator across a version
+# boundary warns at best and fails at worst, so the deploy must resolve the
+# same versions the training run used, not merely compatible ones.
+fastapi==0.141.1
+uvicorn[standard]==0.52.4
+sqlmodel==0.0.42
+numpy==2.5.2
+scipy==1.18.1
+scikit-learn==1.9.0
+pandas==3.0.5
+joblib==1.6.0
+pydantic-settings==2.15.0
+websockets==17.1
+reportlab==5.0.1
 
 # Phase 3. The live sensor reads from a serial port, and app/sources/
 # serial_source.py is the only module permitted to import this. Guard tests
 # enforce that, and import it lazily so a missing driver never breaks the
 # zero hardware demo path.
-pyserial
+pyserial==3.5
